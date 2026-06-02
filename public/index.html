@@ -79,25 +79,25 @@ header h1 {
 .progress-bar {
   display: flex;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 16px 4px;
+  gap: 4px;
+  padding: 8px 12px 4px;
 }
 
 .progress-step {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .progress-dot {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   border: 2px solid var(--gold);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   font-weight: 700;
   color: var(--gold);
   background: transparent;
@@ -112,7 +112,7 @@ header h1 {
 }
 
 .progress-line {
-  width: 18px;
+  width: 12px;
   height: 2px;
   background: var(--gold);
   opacity: 0.3;
@@ -317,8 +317,8 @@ header h1 {
 .analysis-section {
   background: rgba(0,0,0,0.25);
   border-radius: var(--radius);
-  padding: 10px 12px;
-  margin-bottom: 8px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
   border: 1px solid rgba(212,168,67,0.15);
 }
 
@@ -374,8 +374,15 @@ header h1 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 4px 10px 6px;
+  padding: 2px 10px 4px;
   border-radius: var(--radius);
+}
+
+.lean-header {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 1px;
 }
 
 .lean-label {
@@ -383,14 +390,12 @@ header h1 {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--cream-dim);
-  margin-bottom: 2px;
 }
 
 .lean-action {
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  margin-bottom: 2px;
 }
 
 .lean-raise { color: #e74c3c; }
@@ -403,6 +408,43 @@ header h1 {
   color: var(--cream-dim);
   text-align: center;
   line-height: 1.3;
+}
+
+/* ── Sizing sub-cases ── */
+.sizing-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  width: 100%;
+}
+
+.sizing-case {
+  flex: 1;
+  background: rgba(0,0,0,0.15);
+  border-radius: 6px;
+  padding: 5px 8px;
+  text-align: center;
+}
+
+.sizing-case-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  margin-bottom: 2px;
+}
+
+.sizing-case-size {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--cream);
+  line-height: 1.25;
+}
+
+.sizing-case-why {
+  font-size: 0.68rem;
+  color: var(--cream-dim);
+  margin-top: 1px;
 }
 
 /* ── Tournament mode ── */
@@ -562,21 +604,17 @@ header h1 {
   line-height: 1.5;
 }
 
-/* ── Hand bar (slim postflop label) ── */
+/* ── Hand bar (inline with hole cards) ── */
 .hand-bar {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,0.25);
-  border: 1px solid rgba(212,168,67,0.15);
-  border-radius: var(--radius);
-  padding: 6px 12px;
-  margin-bottom: 6px;
+  margin-left: 10px;
+  white-space: nowrap;
 }
 
 .hand-bar-name {
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: 1.05rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: var(--gold-light);
 }
@@ -655,7 +693,8 @@ const STAGES = [
   { id: 'position', label: 'Pos' },
   { id: 'preflop', label: 'Pre' },
   { id: 'flop', label: 'Flop' },
-  { id: 'turnriver', label: 'Turn/Riv' }
+  { id: 'turn', label: 'Turn' },
+  { id: 'river', label: 'River' }
 ];
 
 const POSITIONS = [
@@ -687,7 +726,6 @@ let state = {
   communityCards: [],   // up to 5
   pickingRank: null,
   pickingSuit: null,
-  dealingRiver: false,  // true = user clicked "Deal the River", now picking 5th card
   tourneyMode: false,
   tourneyStack: '',
   tourneySB: '',
@@ -1415,6 +1453,58 @@ function postflopLean(hole, community, handEval, draws) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  STRATEGIC HAND LABEL (draws override weak made hands)
+// ═══════════════════════════════════════════════════════════════
+function strategicLabel(handEval, draws) {
+  const hasFlush = draws.includes('flush_draw');
+  const hasOESD = draws.includes('oesd');
+  const hasGutshot = draws.includes('gutshot');
+  // Strong made hands always show their name
+  if (handEval.handRank >= 3) return handEval.handName;
+  // Weak made hand + draw → lead with the draw
+  if (hasFlush && hasOESD) return 'Flush + Straight Draw';
+  if (hasFlush) return 'Flush Draw';
+  if (hasOESD) return 'Straight Draw (open-ended)';
+  if (hasGutshot) return 'Gutshot Draw';
+  return handEval.handName;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SIZING / POT-ODDS NOTE
+// ═══════════════════════════════════════════════════════════════
+function sizingHTML(action, street, draws) {
+  if (action === 'Raise') {
+    const betSize = street === 0 ? 'Open ~3\u00d7 BB (+1 per limper)' : 'Bet ~\u00bd\u2013\u00be pot';
+    const betWhy = street === 0 ? 'Build the pot, thin the field' : 'Value bet, charge draws';
+    const raiseSize = street === 0 ? 'Re-raise ~3\u00d7 their raise' : 'Raise to ~3\u00d7 their bet';
+    const raiseWhy = 'Make them pay, fold out weaker';
+    return `<div class="sizing-row">`
+      + `<div class="sizing-case"><div class="sizing-case-label">Bet (first to act)</div><div class="sizing-case-size">${betSize}</div><div class="sizing-case-why">${betWhy}</div></div>`
+      + `<div class="sizing-case"><div class="sizing-case-label">Raise (facing a bet)</div><div class="sizing-case-size">${raiseSize}</div><div class="sizing-case-why">${raiseWhy}</div></div>`
+      + `</div>`;
+  }
+  if (action === 'Call') {
+    const hasFlush = draws.includes('flush_draw');
+    const hasOESD = draws.includes('oesd');
+    const hasGutshot = draws.includes('gutshot');
+    let note = '';
+    if (hasFlush && hasOESD) {
+      note = street === 3 ? 'Combo draw ~54% \u2014 call up to half the pot easily' : 'Combo draw ~33% \u2014 call if cost < \u2153 pot';
+    } else if (hasFlush) {
+      note = street === 3 ? '~35% to hit \u2014 call if cost < \u2153 pot (e.g. 100 into 400+)' : '~19% to hit \u2014 only call if cost < \u2155 pot';
+    } else if (hasOESD) {
+      note = street === 3 ? '~31% to hit \u2014 call if cost < \u2153 pot' : '~17% to hit \u2014 only call if cost < \u2155 pot';
+    } else if (hasGutshot) {
+      note = street === 3 ? '~16% \u2014 only call if very cheap relative to pot' : '~8.5% \u2014 gutshot rarely justifies a call';
+    } else {
+      note = 'Call if the price is small relative to the pot';
+    }
+    return `<div class="lean-reason" style="margin-top:2px;font-size:0.78rem;opacity:0.7">${note}</div>`;
+  }
+  return '';
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  M-RATIO
 // ═══════════════════════════════════════════════════════════════
 function computeMRatio(stack, sb, bb) {
@@ -1439,12 +1529,17 @@ function leanClass(action) {
   return 'lean-depends';
 }
 
-function renderHoleCardsSmall() {
-  let html = `<div class="card-slots" style="margin-bottom:4px;gap:8px">`;
+function renderHoleCardsSmall(handLabel, nutsBadgeHTML) {
+  let html = `<div class="card-slots" style="margin-bottom:4px;gap:8px;justify-content:center;align-items:center">`;
   state.holeCards.forEach(c => {
     html += `<div class="card-slot filled ${cardColor(c.suit)}" style="cursor:default;width:42px;height:58px">
       <span class="card-rank" style="font-size:0.95rem">${c.rank}</span><span class="card-suit" style="font-size:0.8rem">${SUIT_SYMBOLS[c.suit]}</span></div>`;
   });
+  if (handLabel) {
+    html += `<div class="hand-bar"><span class="hand-bar-name">${handLabel}</span>`;
+    if (nutsBadgeHTML) html += nutsBadgeHTML;
+    html += `</div>`;
+  }
   html += `</div>`;
   return html;
 }
@@ -1457,7 +1552,8 @@ function render() {
     case 1: renderPosition(app); break;
     case 2: renderPreflop(app); break;
     case 3: renderFlop(app); break;
-    case 4: renderTurnRiver(app); break;
+    case 4: renderTurn(app); break;
+    case 5: renderRiver(app); break;
   }
 }
 
@@ -1559,11 +1655,11 @@ function renderPreflop(app) {
   const hTierLabel = TIER_LABELS[hTier];
   html += `<div class="hand-class-label"><span class="hc-type">${hType}</span><span class="hc-sep">\u00b7</span><span class="hc-tier">Tier ${hTier} (${hTierLabel})</span></div>`;
 
-  // Lean (above the fold)
+  // Lean (above the fold) — single-line header
   html += `<div class="analysis-section"><div class="lean-box">`;
-  html += `<div class="lean-label">Suggested Lean</div>`;
-  html += `<div class="lean-action ${lc}">${lean.action}</div>`;
+  html += `<div class="lean-header"><span class="lean-label">Suggested lean:</span><span class="lean-action ${lc}">${lean.action}</span></div>`;
   html += `<div class="lean-reason">${lean.reason}</div>`;
+  html += sizingHTML(lean.action, 0, []);
   html += `</div></div>`;
 
   // ── Below-the-fold (scrollable) ──
@@ -1603,33 +1699,42 @@ function renderPreflop(app) {
   app.innerHTML = html;
 }
 
-// ── Stages 3 & 4: Post-flop ──
+// ── Stages 3, 4 & 5: Post-flop ──
 function renderFlop(app) { renderPostFlop(app, 3, 'Flop'); }
-function renderTurnRiver(app) {
-  // 3 cards = picking turn card; 4 cards + not dealing river = show turn analysis;
-  // 4 cards + dealing river = picking river card; 5 cards = show river analysis
-  const n = state.communityCards.length;
-  if (n < 4) {
-    renderPostFlop(app, 4, 'Turn');
-  } else if (n === 4 && !state.dealingRiver) {
-    renderPostFlop(app, 4, 'Turn');
-  } else if (n === 4 && state.dealingRiver) {
-    renderPostFlop(app, 5, 'River');
-  } else {
-    renderPostFlop(app, 5, 'River');
-  }
-}
+function renderTurn(app) { renderPostFlop(app, 4, 'Turn'); }
+function renderRiver(app) { renderPostFlop(app, 5, 'River'); }
 
 function renderPostFlop(app, targetTotal, streetName) {
   const currentCommunity = state.communityCards;
   const alreadyHave = currentCommunity.length;
   const selecting = alreadyHave < targetTotal;
 
+  // Pre-compute analysis so we can use the label in the hole-card row
+  let handEval, draws, obs, lean, odds, lc, ra;
+  if (!selecting) {
+    handEval = evaluateHand(state.holeCards, currentCommunity);
+    draws = detectDraws(state.holeCards, currentCommunity);
+    obs = postflopObservations(state.holeCards, currentCommunity, handEval, draws);
+    lean = postflopLean(state.holeCards, currentCommunity, handEval, draws);
+    odds = getOdds(state.holeCards, currentCommunity, handEval, draws);
+    lc = leanClass(lean.action);
+    ra = currentCommunity.length === 5 ? riverAnalysis(state.holeCards, currentCommunity) : null;
+  }
+
   let html = `<div class="stage active">`;
   html += `<div class="stage-title">${streetName}</div>`;
 
-  // Hole cards (small)
-  html += renderHoleCardsSmall();
+  // Hole cards (small) + inline hand label
+  let nutsBadge = '';
+  if (!selecting && ra) {
+    const badgeClass = ra.isNuts ? 'is-nuts' : ra.nutsRank <= 3 ? 'near-nuts' : 'far-nuts';
+    const ordinal = ra.nutsRank === 1 ? 'The nuts' :
+      ra.nutsRank === 2 ? '2nd nuts' :
+      ra.nutsRank === 3 ? '3rd nuts' :
+      ra.nutsRank + 'th best';
+    nutsBadge = `<span class="nuts-badge ${badgeClass}" style="margin:0 0 0 6px;font-size:0.7rem;padding:2px 8px">${ordinal}</span>`;
+  }
+  html += renderHoleCardsSmall(!selecting ? strategicLabel(handEval, draws) : null, nutsBadge);
 
   // Community card slots — always show all 5 on one row
   html += `<div class="card-slots community-slots">`;
@@ -1654,38 +1759,11 @@ function renderPostFlop(app, targetTotal, streetName) {
 
   // Analysis (only show when all cards for this street are dealt)
   if (!selecting) {
-    const handEval = evaluateHand(state.holeCards, currentCommunity);
-    const draws = detectDraws(state.holeCards, currentCommunity);
-    const obs = postflopObservations(state.holeCards, currentCommunity, handEval, draws);
-    const lean = postflopLean(state.holeCards, currentCommunity, handEval, draws);
-    const odds = getOdds(state.holeCards, currentCommunity, handEval, draws);
-
-    const lc = leanClass(lean.action);
-
-    // Compute river analysis once (if applicable)
-    let ra = null;
-    if (currentCommunity.length === 5) {
-      ra = riverAnalysis(state.holeCards, currentCommunity);
-    }
-
-    // ── Above-the-fold: hand label (slim bar) + nuts badge ──
-    html += `<div class="hand-bar">`;
-    html += `<span class="hand-bar-name">${handEval.handName}</span>`;
-    if (ra) {
-      const badgeClass = ra.isNuts ? 'is-nuts' : ra.nutsRank <= 3 ? 'near-nuts' : 'far-nuts';
-      const ordinal = ra.nutsRank === 1 ? 'The nuts' :
-        ra.nutsRank === 2 ? '2nd nuts' :
-        ra.nutsRank === 3 ? '3rd nuts' :
-        ra.nutsRank + 'th best';
-      html += `<span class="nuts-badge ${badgeClass}" style="margin:0 0 0 8px;font-size:0.75rem;padding:2px 10px">${ordinal}</span>`;
-    }
-    html += `</div>`;
-
-    // Lean (above the fold)
+    // Lean (above the fold) — single-line header
     html += `<div class="analysis-section"><div class="lean-box">`;
-    html += `<div class="lean-label">Suggested Lean</div>`;
-    html += `<div class="lean-action ${lc}">${lean.action}</div>`;
+    html += `<div class="lean-header"><span class="lean-label">Suggested lean:</span><span class="lean-action ${lc}">${lean.action}</span></div>`;
     html += `<div class="lean-reason">${lean.reason}</div>`;
+    html += sizingHTML(lean.action, currentCommunity.length, draws);
     html += `</div></div>`;
 
     // ── Below-the-fold (scrollable): observations, odds, river panel ──
@@ -1819,7 +1897,6 @@ function removeCommunityCard(idx) {
   state.communityCards.splice(idx);
   state.pickingRank = null;
   state.pickingSuit = null;
-  state.dealingRiver = false;
   render();
 }
 
@@ -1837,22 +1914,16 @@ function nextStage() {
 }
 
 function prevStage() {
-  if (state.stage === 4 && state.communityCards.length > 3) {
+  if (state.stage === 5) {
+    state.communityCards = state.communityCards.slice(0, 4);
+  } else if (state.stage === 4) {
     state.communityCards = state.communityCards.slice(0, 3);
   }
   state.stage--;
   state.pickingRank = null;
   state.pickingSuit = null;
-  state.dealingRiver = false;
   render();
   window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function dealRiver() {
-  state.dealingRiver = true;
-  state.pickingRank = null;
-  state.pickingSuit = null;
-  render();
 }
 
 function toggleTourney() {
@@ -1875,7 +1946,6 @@ function resetHand() {
     communityCards: [],
     pickingRank: null,
     pickingSuit: null,
-    dealingRiver: false,
     tourneyMode: state.tourneyMode,
     tourneyStack: state.tourneyStack,
     tourneySB: state.tourneySB,
@@ -1892,22 +1962,17 @@ function canAdvance() {
   switch (state.stage) {
     case 0: return state.holeCards.length === 2;
     case 1: return !!state.position;
-    case 2: return true; // pre-flop read is always complete
+    case 2: return true;
     case 3: return state.communityCards.length >= 3;
-    case 4:
-      if (state.communityCards.length === 4) return true;  // can deal river
-      return false; // river is the last stage
+    case 4: return state.communityCards.length >= 4;
+    case 5: return false; // river is the last stage
     default: return false;
   }
 }
 
 function swipeNext() {
   if (!canAdvance()) return;
-  if (state.stage === 4 && state.communityCards.length === 4) {
-    dealRiver();
-  } else if (state.stage < 4) {
-    nextStage();
-  }
+  if (state.stage < 5) nextStage();
 }
 
 function swipePrev() {
