@@ -1,0 +1,2026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Poker Helper</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Crimson+Text:wght@400;600;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --felt: #0b5e2f;
+  --felt-dark: #073d1e;
+  --felt-light: #0d7a3c;
+  --gold: #d4a843;
+  --gold-light: #f0d078;
+  --cream: #f5f0e1;
+  --cream-dim: #d9d2c0;
+  --red: #c0392b;
+  --red-dark: #962d22;
+  --black-card: #1a1a2e;
+  --shadow: rgba(0,0,0,0.35);
+  --radius: 10px;
+}
+
+html, body {
+  font-family: 'Crimson Text', Georgia, serif;
+  background: var(--felt-dark);
+  color: var(--cream);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: radial-gradient(ellipse at 50% 30%, var(--felt-light), var(--felt) 50%, var(--felt-dark) 100%);
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 16px 6px;
+  position: relative;
+}
+
+header h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.5rem;
+  color: var(--gold);
+  text-shadow: 0 2px 4px var(--shadow);
+  letter-spacing: 0.03em;
+}
+
+.reset-btn {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(192,57,43,0.2);
+  color: var(--red);
+  border: 1px solid var(--red);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-family: 'Crimson Text', Georgia, serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.reset-btn:active { background: rgba(192,57,43,0.35); transform: translateY(-50%) scale(0.95); }
+
+/* ── Progress ── */
+.progress-bar {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px 4px;
+}
+
+.progress-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.progress-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--gold);
+  background: transparent;
+  transition: all 0.3s ease;
+  font-family: 'Crimson Text', Georgia, serif;
+}
+
+.progress-dot.active {
+  background: var(--gold);
+  color: var(--felt-dark);
+}
+
+.progress-dot.done {
+  background: var(--gold);
+  color: var(--felt-dark);
+}
+
+.progress-line {
+  width: 18px;
+  height: 2px;
+  background: var(--gold);
+  opacity: 0.3;
+}
+
+.progress-line.done { opacity: 1; }
+
+/* ── Stage Container ── */
+.stage {
+  display: none;
+  padding: 6px 16px 100px;
+  animation: fadeIn 0.35s ease;
+}
+
+.stage.active { display: block; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stage-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.1rem;
+  color: var(--gold-light);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+/* ── Card Slots ── */
+.card-slots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.card-slots.community-slots {
+  gap: 5px;
+  flex-wrap: nowrap;
+  margin-bottom: 6px;
+}
+
+.card-slots.community-slots .card-slot {
+  width: calc((100vw - 32px - 20px) / 5);
+  max-width: 58px;
+  height: 72px;
+  flex-shrink: 0;
+  font-size: 0.65rem;
+}
+
+.card-slots.community-slots .card-slot .card-rank { font-size: 1.05rem; }
+.card-slots.community-slots .card-slot .card-suit { font-size: 0.85rem; }
+
+.card-slot {
+  width: 72px;
+  height: 100px;
+  border-radius: var(--radius);
+  border: 2px dashed var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: var(--gold);
+  opacity: 0.5;
+  transition: all 0.25s ease;
+  background: rgba(0,0,0,0.15);
+}
+
+.card-slot.filled {
+  border-style: solid;
+  opacity: 1;
+  background: #fff;
+  color: #000;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: 'Playfair Display', Georgia, serif;
+  box-shadow: 0 3px 10px var(--shadow);
+  position: relative;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.card-slot.filled.red { color: var(--red); }
+.card-slot.filled.black { color: var(--black-card); }
+
+.card-slot.selecting {
+  opacity: 1;
+  border-color: var(--gold-light);
+  box-shadow: 0 0 12px rgba(212,168,67,0.4);
+}
+
+.card-slot .card-rank { font-size: 1.4rem; line-height: 1; }
+.card-slot .card-suit { font-size: 1.1rem; line-height: 1; }
+
+/* ── Picker ── */
+.picker-section {
+  background: rgba(0,0,0,0.2);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.picker-label {
+  font-size: 0.8rem;
+  color: var(--cream-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.rank-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.suit-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.pick-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 4px;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: 'Crimson Text', Georgia, serif;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: rgba(255,255,255,0.12);
+  color: var(--cream);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pick-btn:active { transform: scale(0.93); }
+
+.pick-btn.selected {
+  background: var(--gold);
+  color: var(--felt-dark);
+}
+
+.pick-btn.disabled {
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+.pick-btn.suit-btn { font-size: 1.5rem; }
+.pick-btn.suit-hearts, .pick-btn.suit-diamonds { color: var(--red); }
+.pick-btn.suit-hearts.selected, .pick-btn.suit-diamonds.selected { color: var(--red-dark); background: var(--gold); }
+
+/* ── Action buttons ── */
+.btn {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  margin: 10px auto 0;
+  padding: 11px;
+  border: none;
+  border-radius: var(--radius);
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 44px;
+}
+
+.btn-primary {
+  background: var(--gold);
+  color: var(--felt-dark);
+}
+
+.btn-primary:active { background: var(--gold-light); transform: scale(0.97); }
+
+.btn-primary:disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.btn-secondary {
+  background: rgba(255,255,255,0.1);
+  color: var(--gold);
+  border: 1px solid var(--gold);
+}
+
+.btn-secondary:active { background: rgba(255,255,255,0.2); }
+
+
+/* ── Position selector ── */
+.position-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.position-btn {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px;
+  border: 2px solid rgba(212,168,67,0.3);
+  border-radius: var(--radius);
+  background: rgba(0,0,0,0.15);
+  color: var(--cream);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 48px;
+  text-align: left;
+  font-family: 'Crimson Text', Georgia, serif;
+  font-size: 1rem;
+}
+
+.position-btn:active { transform: scale(0.98); }
+
+.position-btn.selected {
+  border-color: var(--gold);
+  background: rgba(212,168,67,0.15);
+}
+
+.position-btn .pos-name {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--gold-light);
+}
+
+.position-btn .pos-desc {
+  font-size: 0.8rem;
+  color: var(--cream-dim);
+  margin-top: 3px;
+}
+
+/* ── Analysis panels ── */
+.analysis-section {
+  background: rgba(0,0,0,0.25);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(212,168,67,0.15);
+}
+
+.analysis-section h3 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 0.9rem;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+
+.observation {
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.observation:last-child { border-bottom: none; }
+
+.observation::before {
+  content: '\2666';
+  color: var(--gold);
+  margin-right: 8px;
+}
+
+/* ── Chips (probability) ── */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(212,168,67,0.15);
+  border: 1px solid var(--gold);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 0.75rem;
+  color: var(--gold-light);
+  white-space: nowrap;
+}
+
+.chip .chip-val {
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+/* ── Lean ── */
+.lean-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 10px 6px;
+  border-radius: var(--radius);
+}
+
+.lean-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--cream-dim);
+  margin-bottom: 2px;
+}
+
+.lean-action {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.lean-raise { color: #e74c3c; }
+.lean-call { color: var(--gold-light); }
+.lean-fold { color: #7f8c8d; }
+.lean-depends { color: #e67e22; }
+
+.lean-reason {
+  font-size: 0.82rem;
+  color: var(--cream-dim);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.lean-disclaimer {
+  font-size: 0.65rem;
+  color: rgba(245,240,225,0.3);
+  text-align: center;
+  margin-top: 3px;
+  font-style: italic;
+}
+
+/* ── Tournament mode ── */
+.tourney-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: rgba(0,0,0,0.15);
+  border-radius: var(--radius);
+  cursor: pointer;
+  border: 1px solid rgba(212,168,67,0.2);
+}
+
+.tourney-toggle input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--gold);
+}
+
+.tourney-toggle label {
+  font-size: 0.9rem;
+  color: var(--cream);
+  cursor: pointer;
+}
+
+.tourney-fields {
+  display: none;
+  margin-top: 10px;
+  padding: 12px;
+  background: rgba(0,0,0,0.2);
+  border-radius: var(--radius);
+}
+
+.tourney-fields.show { display: block; }
+
+.tourney-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tourney-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.tourney-field label {
+  font-size: 0.72rem;
+  color: var(--cream-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+
+.tourney-field input {
+  padding: 8px 10px;
+  border: 1px solid rgba(212,168,67,0.4);
+  border-radius: 6px;
+  background: rgba(0,0,0,0.3);
+  color: var(--cream);
+  font-size: 1rem;
+  font-family: 'Crimson Text', Georgia, serif;
+  width: 100%;
+}
+
+.m-ratio-result {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.m-healthy { background: rgba(39,174,96,0.2); border: 1px solid rgba(39,174,96,0.4); }
+.m-caution { background: rgba(230,126,34,0.2); border: 1px solid rgba(230,126,34,0.4); }
+.m-danger { background: rgba(192,57,43,0.2); border: 1px solid rgba(192,57,43,0.4); }
+.m-critical { background: rgba(192,57,43,0.35); border: 1px solid rgba(192,57,43,0.6); }
+
+/* ── New Hand ── */
+.new-hand-wrap {
+  text-align: center;
+  padding: 10px 16px 30px;
+}
+
+/* ── Undo card ── */
+.card-slot.filled { cursor: pointer; }
+.card-slot.filled::after {
+  content: '\00d7';
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  font-size: 0.75rem;
+  color: rgba(0,0,0,0.3);
+}
+
+/* ── River strength panel ── */
+.river-panel {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.river-panel h3 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1rem;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+.river-meter {
+  height: 10px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.river-meter-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.4s ease;
+}
+
+.river-meter-fill.strong { background: linear-gradient(90deg, #27ae60, #2ecc71); }
+.river-meter-fill.medium { background: linear-gradient(90deg, #e67e22, #f39c12); }
+.river-meter-fill.weak { background: linear-gradient(90deg, #c0392b, #e74c3c); }
+
+.river-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  margin-bottom: 10px;
+}
+
+.river-stat { text-align: center; }
+.river-stat .rv-num { font-size: 1.15rem; font-weight: 700; font-family: 'Playfair Display', Georgia, serif; }
+.river-stat .rv-label { color: var(--cream-dim); font-size: 0.72rem; }
+.rv-win { color: #2ecc71; }
+.rv-tie { color: var(--gold-light); }
+.rv-lose { color: #e74c3c; }
+
+.nuts-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.nuts-badge.is-nuts { background: rgba(46,204,113,0.25); color: #2ecc71; border: 1px solid rgba(46,204,113,0.4); }
+.nuts-badge.near-nuts { background: rgba(241,196,15,0.2); color: var(--gold-light); border: 1px solid rgba(241,196,15,0.3); }
+.nuts-badge.far-nuts { background: rgba(192,57,43,0.2); color: #e74c3c; border: 1px solid rgba(192,57,43,0.3); }
+
+.beats-list {
+  font-size: 0.85rem;
+  color: var(--cream-dim);
+  line-height: 1.5;
+}
+
+/* ── Hand bar (slim postflop label) ── */
+.hand-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(212,168,67,0.15);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  margin-bottom: 6px;
+}
+
+.hand-bar-name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--gold-light);
+}
+
+/* ── Hand classification label ── */
+.hand-class-label {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--cream-dim);
+  margin-bottom: 6px;
+  letter-spacing: 0.03em;
+}
+
+.hand-class-label .hc-type {
+  color: var(--cream);
+  font-weight: 600;
+}
+
+.hand-class-label .hc-tier {
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.hand-class-label .hc-sep {
+  margin: 0 6px;
+  opacity: 0.4;
+}
+
+/* ── Swipe hint ── */
+.swipe-hint {
+  text-align: center;
+  font-size: 0.72rem;
+  color: rgba(245,240,225,0.35);
+  margin-top: 10px;
+  letter-spacing: 0.05em;
+  user-select: none;
+}
+
+/* ── Responsive ── */
+@media (min-width: 480px) {
+  .rank-grid { grid-template-columns: repeat(13, 1fr); }
+  header h1 { font-size: 2rem; }
+  .card-slots.community-slots .card-slot { max-width: 64px; height: 82px; }
+  .card-slots.community-slots .card-slot .card-rank { font-size: 1.15rem; }
+  .card-slots.community-slots .card-slot .card-suit { font-size: 0.95rem; }
+}
+
+@media (min-width: 700px) {
+  .stage { max-width: 600px; margin-left: auto; margin-right: auto; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Poker Helper</h1>
+  <button class="reset-btn" onclick="resetHand()">New Hand</button>
+</header>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<div id="app"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════════════════════════
+const RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+const SUITS = ['s','h','d','c']; // spades, hearts, diamonds, clubs
+const SUIT_SYMBOLS = { s:'\u2660', h:'\u2665', d:'\u2666', c:'\u2663' };
+const SUIT_NAMES = { s:'spades', h:'hearts', d:'diamonds', c:'clubs' };
+const RANK_VALUES = { A:14, K:13, Q:12, J:11, T:10, 9:9, 8:8, 7:7, 6:6, 5:5, 4:4, 3:3, 2:2 };
+
+const STAGES = [
+  { id: 'hole', label: 'Cards' },
+  { id: 'position', label: 'Pos' },
+  { id: 'preflop', label: 'Pre' },
+  { id: 'flop', label: 'Flop' },
+  { id: 'turnriver', label: 'Turn/Riv' }
+];
+
+const POSITIONS = [
+  { id:'early', name:'Early Position', desc:'First to act — least information, play only premium hands.' },
+  { id:'middle', name:'Middle Position', desc:'A few players have acted — slightly wider range, still cautious.' },
+  { id:'late', name:'Late / Button', desc:'Last to act — most information, can play more hands profitably.' },
+  { id:'sb', name:'Small Blind', desc:'Forced bet, out of position post-flop — tricky spot, play tight.' },
+  { id:'bb', name:'Big Blind', desc:'Forced full bet, act last pre-flop but first post-flop.' }
+];
+
+// ── Premium hand tiers ──
+// Tier 1: Always raise
+const TIER1 = ['AA','KK','QQ','AKs'];
+// Tier 2: Strong raise
+const TIER2 = ['JJ','TT','AQs','AKo','AJs','KQs'];
+// Tier 3: Raise or call depending on position
+const TIER3 = ['99','88','ATs','AQo','KJs','QJs','JTs','KTs','AJo'];
+// Tier 4: Playable in late position or cheaply
+const TIER4 = ['77','66','55','44','33','22','A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s',
+               'KTo','QJo','JTo','T9s','98s','87s','76s','65s','K9s','Q9s','J9s'];
+
+// ═══════════════════════════════════════════════════════════════
+//  APP STATE
+// ═══════════════════════════════════════════════════════════════
+let state = {
+  stage: 0,
+  holeCards: [],       // [{rank, suit}, ...]
+  position: null,
+  communityCards: [],   // up to 5
+  pickingRank: null,
+  pickingSuit: null,
+  dealingRiver: false,  // true = user clicked "Deal the River", now picking 5th card
+  tourneyMode: false,
+  tourneyStack: '',
+  tourneySB: '',
+  tourneyBB: ''
+};
+
+function usedCards() {
+  return [...state.holeCards, ...state.communityCards];
+}
+
+function cardId(c) { return c.rank + c.suit; }
+
+function isUsed(rank, suit) {
+  return usedCards().some(c => c.rank === rank && c.suit === suit);
+}
+
+function cardColor(suit) {
+  return (suit === 'h' || suit === 'd') ? 'red' : 'black';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  HAND KEY (for lookup)
+// ═══════════════════════════════════════════════════════════════
+function handKey(c1, c2) {
+  let r1 = RANK_VALUES[c1.rank], r2 = RANK_VALUES[c2.rank];
+  let h, l;
+  if (r1 >= r2) { h = c1; l = c2; }
+  else { h = c2; l = c1; }
+  if (h.rank === l.rank) return h.rank + l.rank;
+  let suited = h.suit === l.suit ? 's' : 'o';
+  return h.rank + l.rank + suited;
+}
+
+function getHandTier(key) {
+  if (TIER1.includes(key)) return 1;
+  if (TIER2.includes(key)) return 2;
+  if (TIER3.includes(key)) return 3;
+  if (TIER4.includes(key)) return 4;
+  return 5;
+}
+
+const TIER_LABELS = {
+  1: 'Premium',
+  2: 'Strong',
+  3: 'Playable',
+  4: 'Marginal',
+  5: 'Fold'
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  HAND TYPE CLASSIFIER (7 buckets)
+// ═══════════════════════════════════════════════════════════════
+function classifyHandType(c1, c2) {
+  const r1 = RANK_VALUES[c1.rank], r2 = RANK_VALUES[c2.rank];
+  const high = Math.max(r1, r2), low = Math.min(r1, r2);
+  const suited = c1.suit === c2.suit;
+  const gap = high - low;
+  const connected = gap === 1 || (high === 14 && low === 2);
+  const gapped = gap === 2 || gap === 3; // one or two gaps (e.g. J9, T8, 97, 86)
+  const broadway = high >= 10 && low >= 10;
+
+  if (r1 === r2) return 'Pocket pair';
+  if (suited && connected) return 'Suited connectors';
+  if (suited && gapped) return 'Suited gappers';
+  if (suited) return 'Suited other';
+  // Offsuit broadway before offsuit connectors (KQo, AKo = broadway, not connectors)
+  if (!suited && broadway) return 'Offsuit broadway';
+  if (!suited && connected) return 'Offsuit connectors';
+  return 'Offsuit other';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  HAND EVALUATOR
+// ═══════════════════════════════════════════════════════════════
+function evaluateHand(hole, community) {
+  const all = [...hole, ...community];
+  const result = {
+    handName: 'High Card',
+    handRank: 0,
+    details: {},
+    draws: []
+  };
+
+  if (all.length < 2) return result;
+
+  const vals = all.map(c => RANK_VALUES[c.rank]).sort((a,b) => b - a);
+  const suits = {};
+  all.forEach(c => { suits[c.suit] = (suits[c.suit]||0) + 1; });
+  const rankCounts = {};
+  all.forEach(c => { rankCounts[c.rank] = (rankCounts[c.rank]||0) + 1; });
+
+  // Unique sorted values for straight check
+  const uniqueVals = [...new Set(vals)].sort((a,b) => b - a);
+
+  // ── Made hands ──
+  // Check flush (5+ of same suit)
+  let flushSuit = null;
+  for (const s of SUITS) {
+    if ((suits[s]||0) >= 5) flushSuit = s;
+  }
+
+  // Check straight (5 consecutive)
+  function findStraight(uvals) {
+    // Add low ace
+    let v = [...uvals];
+    if (v.includes(14)) v.push(1);
+    for (let i = 0; i <= v.length - 5; i++) {
+      if (v[i] - v[i+4] === 4) {
+        let run = true;
+        for (let j = 1; j < 5; j++) {
+          if (!v.includes(v[i] - j)) { run = false; break; }
+        }
+        if (run) return v[i];
+      }
+    }
+    return 0;
+  }
+
+  const straightHigh = findStraight(uniqueVals);
+
+  // Straight flush check
+  if (flushSuit && community.length >= 3) {
+    const flushCards = all.filter(c => c.suit === flushSuit);
+    const flushVals = [...new Set(flushCards.map(c => RANK_VALUES[c.rank]))].sort((a,b) => b - a);
+    const sfHigh = findStraight(flushVals);
+    if (sfHigh) {
+      if (sfHigh === 14) {
+        result.handName = 'Royal Flush';
+        result.handRank = 10;
+      } else {
+        result.handName = 'Straight Flush';
+        result.handRank = 9;
+      }
+      return result;
+    }
+  }
+
+  // Quads
+  const quadRank = Object.keys(rankCounts).find(r => rankCounts[r] === 4);
+  if (quadRank) {
+    result.handName = 'Four of a Kind';
+    result.handRank = 8;
+    result.details.quadRank = quadRank;
+    return result;
+  }
+
+  // Full house
+  const trips = Object.keys(rankCounts).filter(r => rankCounts[r] >= 3).sort((a,b) => RANK_VALUES[b] - RANK_VALUES[a]);
+  const pairs = Object.keys(rankCounts).filter(r => rankCounts[r] >= 2).sort((a,b) => RANK_VALUES[b] - RANK_VALUES[a]);
+  if (trips.length >= 1 && pairs.length >= 2) {
+    result.handName = 'Full House';
+    result.handRank = 7;
+    result.details.trips = trips[0];
+    return result;
+  }
+
+  if (flushSuit) {
+    result.handName = 'Flush';
+    result.handRank = 6;
+    result.details.flushSuit = flushSuit;
+    return result;
+  }
+
+  if (straightHigh) {
+    result.handName = 'Straight';
+    result.handRank = 5;
+    result.details.straightHigh = straightHigh;
+    return result;
+  }
+
+  // Three of a kind
+  if (trips.length >= 1) {
+    const tripRank = trips[0];
+    const isSet = hole.filter(c => c.rank === tripRank).length === 2;
+    const isTrips = hole.filter(c => c.rank === tripRank).length === 1 && community.filter(c => c.rank === tripRank).length === 2;
+    result.handName = isSet ? 'Set' : (isTrips ? 'Trips' : 'Three of a Kind');
+    result.handRank = 4;
+    result.details.tripRank = tripRank;
+    result.details.isSet = isSet;
+    return result;
+  }
+
+  // Two pair
+  const pairRanks = Object.keys(rankCounts).filter(r => rankCounts[r] === 2).sort((a,b) => RANK_VALUES[b] - RANK_VALUES[a]);
+  if (pairRanks.length >= 2) {
+    result.handName = 'Two Pair';
+    result.handRank = 3;
+    result.details.pairRanks = pairRanks.slice(0,2);
+    return result;
+  }
+
+  // One pair
+  if (pairRanks.length === 1) {
+    const pr = pairRanks[0];
+    const holePair = hole[0].rank === hole[1].rank && hole[0].rank === pr;
+    result.handRank = 2;
+    result.details.pairRank = pr;
+
+    if (community.length >= 3) {
+      const boardVals = community.map(c => RANK_VALUES[c.rank]).sort((a,b) => b - a);
+      const pv = RANK_VALUES[pr];
+      if (holePair && pv > boardVals[0]) {
+        result.handName = 'Overpair';
+        result.details.isOverpair = true;
+      } else if (holePair) {
+        result.handName = 'Pocket Pair';
+        result.details.isPocketPair = true;
+      } else if (pv === boardVals[0]) {
+        result.handName = 'Top Pair';
+        result.details.isTopPair = true;
+      } else if (pv === boardVals[1]) {
+        result.handName = 'Middle Pair';
+      } else {
+        result.handName = 'Bottom Pair';
+      }
+    } else {
+      result.handName = holePair ? 'Pocket Pair' : 'Pair';
+    }
+    return result;
+  }
+
+  // High card
+  result.handName = 'High Card';
+  result.handRank = 1;
+  result.details.highCard = RANKS.find(r => all.some(c => c.rank === r));
+  return result;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  NUMERIC HAND EVALUATOR (for comparison — returns [category, ...tiebreakers])
+//  Category: 9=SF, 8=quads, 7=FH, 6=flush, 5=straight, 4=trips, 3=two pair, 2=pair, 1=high
+// ═══════════════════════════════════════════════════════════════
+function evalHand7(cards) {
+  // Find best 5-card hand from 7 cards, return comparable score array
+  let best = null;
+  const combos = combinations5(cards);
+  for (let i = 0; i < combos.length; i++) {
+    const score = score5(combos[i]);
+    if (!best || compareScores(score, best) > 0) best = score;
+  }
+  return best;
+}
+
+function combinations5(cards) {
+  const result = [];
+  const n = cards.length;
+  for (let a = 0; a < n-4; a++)
+    for (let b = a+1; b < n-3; b++)
+      for (let c = b+1; c < n-2; c++)
+        for (let d = c+1; d < n-1; d++)
+          for (let e = d+1; e < n; e++)
+            result.push([cards[a],cards[b],cards[c],cards[d],cards[e]]);
+  return result;
+}
+
+function score5(hand) {
+  const vals = hand.map(c => RANK_VALUES[c.rank]).sort((a,b) => b - a);
+  const suits = hand.map(c => c.suit);
+  const isFlush = suits.every(s => s === suits[0]);
+
+  // Straight check (including wheel)
+  let isStraight = false;
+  let straightHigh = 0;
+  if (vals[0] - vals[4] === 4 && new Set(vals).size === 5) {
+    isStraight = true;
+    straightHigh = vals[0];
+  } else if (vals[0]===14 && vals[1]===5 && vals[2]===4 && vals[3]===3 && vals[4]===2) {
+    isStraight = true;
+    straightHigh = 5; // wheel, 5-high straight
+  }
+
+  // Count ranks
+  const counts = {};
+  vals.forEach(v => { counts[v] = (counts[v]||0) + 1; });
+  const groups = Object.entries(counts).map(([v,c]) => [c, Number(v)]).sort((a,b) => b[0]-a[0] || b[1]-a[1]);
+
+  if (isFlush && isStraight) return [9, straightHigh];
+  if (groups[0][0] === 4) return [8, groups[0][1], groups[1][1]];
+  if (groups[0][0] === 3 && groups[1][0] === 2) return [7, groups[0][1], groups[1][1]];
+  if (isFlush) return [6, ...vals];
+  if (isStraight) return [5, straightHigh];
+  if (groups[0][0] === 3) return [4, groups[0][1], groups[1][1], groups[2][1]];
+  if (groups[0][0] === 2 && groups[1][0] === 2) {
+    const p1 = Math.max(groups[0][1], groups[1][1]);
+    const p2 = Math.min(groups[0][1], groups[1][1]);
+    return [3, p1, p2, groups[2][1]];
+  }
+  if (groups[0][0] === 2) return [2, groups[0][1], groups[1][1], groups[2][1], groups[3][1]];
+  return [1, ...vals];
+}
+
+function compareScores(a, b) {
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    if ((a[i]||0) !== (b[i]||0)) return (a[i]||0) - (b[i]||0);
+  }
+  return 0;
+}
+
+function scoreCategory(score) {
+  const names = {9:'Straight Flush',8:'Four of a Kind',7:'Full House',6:'Flush',5:'Straight',4:'Three of a Kind',3:'Two Pair',2:'Pair',1:'High Card'};
+  return names[score[0]] || 'High Card';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RIVER ANALYSIS — nuts ranking, beats-you list, win %
+// ═══════════════════════════════════════════════════════════════
+function riverAnalysis(hole, community) {
+  const deck = [];
+  for (const r of RANKS) for (const s of SUITS) deck.push({rank:r, suit:s});
+  const usedSet = new Set([...hole, ...community].map(c => c.rank+c.suit));
+  const remaining = deck.filter(c => !usedSet.has(c.rank+c.suit));
+
+  const heroScore = evalHand7([...hole, ...community]);
+  const heroCat = heroScore[0];
+
+  // Enumerate all opponent 2-card combos
+  let wins = 0, ties = 0, losses = 0;
+  const oppScores = [];
+
+  for (let i = 0; i < remaining.length - 1; i++) {
+    for (let j = i + 1; j < remaining.length; j++) {
+      const oppCards = [remaining[i], remaining[j]];
+      const oppScore = evalHand7([...oppCards, ...community]);
+      const cmp = compareScores(heroScore, oppScore);
+      if (cmp > 0) wins++;
+      else if (cmp === 0) ties++;
+      else losses++;
+      oppScores.push(oppScore);
+    }
+  }
+
+  const total = wins + ties + losses;
+  const winPct = ((wins / total) * 100).toFixed(1);
+  const tiePct = ((ties / total) * 100).toFixed(1);
+  const losePct = ((losses / total) * 100).toFixed(1);
+
+  // Find nuts rank: how many distinct better scores exist?
+  const betterScores = new Set();
+  oppScores.forEach(os => {
+    if (compareScores(os, heroScore) > 0) {
+      betterScores.add(os.join(','));
+    }
+  });
+  const nutsRank = betterScores.size + 1; // 1 = the nuts
+
+  // What hand types beat the hero?
+  const beatsYou = [];
+  const catNames = {9:'a straight flush',8:'four of a kind',7:'a full house',6:'a flush (higher)',5:'a straight (higher)',4:'trips (higher)',3:'two pair (higher)',2:'a pair (higher)',1:'a higher card'};
+
+  if (nutsRank === 1) {
+    // nothing beats us
+  } else {
+    // Group by category
+    const beatCats = {};
+    oppScores.forEach(os => {
+      if (compareScores(os, heroScore) > 0) {
+        beatCats[os[0]] = true;
+      }
+    });
+    // List from strongest down
+    for (let cat = 9; cat >= 1; cat--) {
+      if (beatCats[cat]) {
+        if (cat > heroCat) {
+          // Different hand type
+          const typeNames = {9:'a straight flush',8:'four of a kind',7:'a full house',6:'a flush',5:'a straight',4:'three of a kind',3:'two pair',2:'a pair'};
+          if (typeNames[cat]) beatsYou.push(typeNames[cat]);
+        } else if (cat === heroCat) {
+          // Same type but better
+          const sameName = scoreCategory(heroScore);
+          beatsYou.push(`a higher ${sameName.toLowerCase()}`);
+        }
+      }
+    }
+  }
+
+  return {
+    nutsRank,
+    heroHandName: scoreCategory(heroScore),
+    winPct, tiePct, losePct,
+    wins, ties, losses, total,
+    beatsYou,
+    isNuts: nutsRank === 1
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DRAW DETECTION
+// ═══════════════════════════════════════════════════════════════
+function detectDraws(hole, community) {
+  const all = [...hole, ...community];
+  const draws = [];
+
+  // Flush draw: 4 to a suit
+  const suitCounts = {};
+  all.forEach(c => { suitCounts[c.suit] = (suitCounts[c.suit]||0) + 1; });
+  for (const s of SUITS) {
+    if (suitCounts[s] === 4) {
+      // Ensure at least one hole card contributes
+      if (hole.some(c => c.suit === s)) {
+        draws.push('flush_draw');
+      }
+    }
+  }
+
+  // Straight draws
+  const uniqueVals = [...new Set(all.map(c => RANK_VALUES[c.rank]))].sort((a,b) => a - b);
+  if (uniqueVals.includes(14)) uniqueVals.unshift(1); // low ace
+
+  // Check for OESD and gutshot
+  let hasOESD = false;
+  let hasGutshot = false;
+
+  // Slide a window of 5 across possible values 1-14
+  for (let low = 1; low <= 10; low++) {
+    const window = [low, low+1, low+2, low+3, low+4];
+    const have = window.filter(v => uniqueVals.includes(v)).length;
+    if (have === 4) {
+      // Check if missing card is at the end (OESD) or middle (gutshot)
+      const missing = window.find(v => !uniqueVals.includes(v));
+      if (missing === window[0] || missing === window[4]) {
+        hasOESD = true;
+      } else {
+        hasGutshot = true;
+      }
+    }
+  }
+
+  if (hasOESD) draws.push('oesd');
+  else if (hasGutshot) draws.push('gutshot');
+
+  return draws;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ODDS ENGINE
+// ═══════════════════════════════════════════════════════════════
+function getOdds(hole, community, handEval, draws) {
+  const chips = [];
+  const street = community.length;
+
+  if (street === 0) {
+    const isPair = hole[0].rank === hole[1].rank;
+    const isSuited = hole[0].suit === hole[1].suit;
+
+    if (isPair) {
+      chips.push({ label:'Dealt this pair', value:'0.45%' });
+      chips.push({ label:'Flop a set', value:'11.8%' });
+      if (RANK_VALUES[hole[0].rank] === 11) {
+        chips.push({ label:'Overcard on flop', value:'~52%' });
+      }
+    } else {
+      if (isSuited) chips.push({ label:'Dealt this suited', value:'0.3%' });
+      chips.push({ label:'Flop a pair', value:'32.4%' });
+      chips.push({ label:'Pair by river', value:'~50%' });
+    }
+    return chips;
+  }
+
+  if (draws.includes('flush_draw')) {
+    if (street === 3) chips.push({ label:'Flush by river', value:'34.97%' });
+    else if (street === 4) chips.push({ label:'Flush on river', value:'~19%' });
+  }
+  if (draws.includes('oesd')) {
+    if (street === 3) chips.push({ label:'Straight by river', value:'31.5%' });
+    else if (street === 4) chips.push({ label:'Straight on river', value:'~17%' });
+  }
+  if (draws.includes('gutshot')) {
+    if (street === 3) chips.push({ label:'Gutshot by river', value:'~16.5%' });
+    else if (street === 4) chips.push({ label:'Gutshot on river', value:'~8.5%' });
+  }
+  if (handEval.handName === 'Set' || (handEval.handRank === 4 && handEval.details.isSet)) {
+    if (street <= 4) chips.push({ label:'Full house+ by river', value:'33.4%' });
+  }
+  if (handEval.handName === 'Two Pair') {
+    if (street <= 4) chips.push({ label:'Full house+ by river', value:'16.74%' });
+  }
+  if (chips.length === 0 && street < 5 && handEval.handRank <= 2) {
+    chips.push({ label:'Improve next card', value:'~6-12%' });
+  }
+  return chips;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PRE-FLOP OBSERVATIONS
+// ═══════════════════════════════════════════════════════════════
+function preflopObservations(hole, position) {
+  const key = handKey(hole[0], hole[1]);
+  const tier = getHandTier(key);
+  const isPair = hole[0].rank === hole[1].rank;
+  const isSuited = hole[0].suit === hole[1].suit;
+  const r1 = RANK_VALUES[hole[0].rank], r2 = RANK_VALUES[hole[1].rank];
+  const high = Math.max(r1, r2), low = Math.min(r1, r2);
+  const gap = high - low;
+  const isConnected = gap === 1 || (high === 14 && low === 2);
+  const obs = [];
+
+  // Obs 1: Hand identity
+  if (isPair) {
+    if (high >= 11) obs.push(`${key} \u2014 premium pocket pair, top ~3% of hands`);
+    else if (high >= 7) obs.push(`${key} \u2014 medium pair, vulnerable to overcards`);
+    else obs.push(`${key} \u2014 small pair, set-mining hand (11.8% to flop a set)`);
+  } else if (tier <= 2) {
+    obs.push(`${key} \u2014 premium hand, top ~5%`);
+  } else if (tier === 3) {
+    obs.push(`${key} \u2014 strong hand${isSuited ? ', suited helps' : ', plays well in position'}`);
+  } else if (isSuited && isConnected) {
+    obs.push(`${key} \u2014 suited connectors, speculative`);
+  } else if (isSuited) {
+    obs.push(`${key} \u2014 suited, but high-card value matters more`);
+  } else if (high >= 12 && low >= 10) {
+    obs.push(`${key} \u2014 broadway cards, straight potential, no flush outs`);
+  } else {
+    obs.push(`${key} \u2014 marginal, fold from most seats`);
+  }
+
+  // Obs 2: Position context
+  const pos = position || 'late';
+  if (pos === 'early' || pos === 'sb') {
+    if (tier <= 2) obs.push('Strong enough to raise from any seat');
+    else if (tier === 3) obs.push('Borderline early \u2014 6\u20138 players behind you');
+    else obs.push('Early position \u2014 need premium hands here');
+  } else if (pos === 'middle') {
+    if (tier <= 3) obs.push('Middle position \u2014 playable with a raise');
+    else obs.push('Middle position \u2014 marginal, raise-or-fold');
+  } else if (pos === 'late') {
+    if (tier <= 4) obs.push('Button \u2014 best seat, act last post-flop');
+    else obs.push('Button \u2014 thin, but blind-steal possible');
+  } else {
+    if (tier <= 3) obs.push('Big blind discount \u2014 worth defending vs. one raise');
+    else obs.push('Big blind \u2014 chips already in, weigh the price');
+  }
+
+  // Obs 3: Key principle
+  if (isPair && high <= 6) {
+    obs.push('Set-mine cheap, fold if you miss the flop');
+  } else if (isPair && high === 11) {
+    obs.push('Danger hand \u2014 overcard hits flop ~52%');
+  } else if (tier >= 4 && !isSuited) {
+    obs.push('Fold ~85% of hands \u2014 discipline is the edge');
+  } else if (isSuited && gap <= 2) {
+    obs.push('See cheap flops \u2014 don\'t call big raises');
+  } else if (high >= 13 && low <= 9 && !isSuited) {
+    obs.push('Domination risk \u2014 same high card, worse kicker');
+  } else if (tier <= 2) {
+    obs.push('Raise > call \u2014 build the pot, thin the field');
+  } else {
+    obs.push('Prefer raise-or-fold over calling');
+  }
+
+  return obs;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PRE-FLOP LEAN
+// ═══════════════════════════════════════════════════════════════
+function preflopLean(hole, position) {
+  const key = handKey(hole[0], hole[1]);
+  const tier = getHandTier(key);
+  const pos = position || 'late';
+  const isPair = hole[0].rank === hole[1].rank;
+  const high = Math.max(RANK_VALUES[hole[0].rank], RANK_VALUES[hole[1].rank]);
+
+  if (tier === 1) return { action:'Raise', reason:'Top-tier hand, build the pot' };
+  if (tier === 2) {
+    if (pos === 'early' || pos === 'sb') return { action:'Raise', reason:'Strong enough to raise from any seat' };
+    return { action:'Raise', reason:'Premium \u2014 almost always a raise' };
+  }
+  if (tier === 3) {
+    if (pos === 'early') return { action:'It depends', reason:'Borderline early \u2014 raise tight table, fold with action' };
+    if (pos === 'sb') return { action:'Raise', reason:'Raise to avoid multi-way out of position' };
+    return { action:'Raise', reason:'Raising hand in position \u2014 take initiative' };
+  }
+  if (tier === 4) {
+    if (pos === 'early' || pos === 'sb') return { action:'Fold', reason:'Too speculative from this seat' };
+    if (pos === 'middle') return { action:'It depends', reason:'Open-raise if folded to you, otherwise fold' };
+    if (isPair && high <= 6) return { action:'Call', reason:'Set-mine cheap, don\'t over-invest pre-flop' };
+    return { action:'Raise', reason:'Late position \u2014 open wide, steal blinds' };
+  }
+  if (pos === 'late') return { action:'It depends', reason:'Steal if folded to you, fold to resistance' };
+  if (pos === 'bb') return { action:'It depends', reason:'BB discount \u2014 call small raises, fold big ones' };
+  return { action:'Fold', reason:'Weak hand \u2014 save chips for a better spot' };
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  POST-FLOP OBSERVATIONS
+// ═══════════════════════════════════════════════════════════════
+function postflopObservations(hole, community, handEval, draws) {
+  const obs = [];
+  const street = community.length;
+
+  // Obs 1: Hand strength
+  if (handEval.handRank >= 7) {
+    obs.push(`${handEval.handName} \u2014 monster, build the pot`);
+  } else if (handEval.handRank >= 5) {
+    obs.push(`${handEval.handName} \u2014 strong made hand, bet for value`);
+  } else if (handEval.handRank === 4) {
+    obs.push(`${handEval.handName} \u2014 very strong${handEval.details.isSet ? ', disguised' : ''}`);
+  } else if (handEval.handName === 'Overpair') {
+    obs.push(`Overpair (${handEval.details.pairRank}${handEval.details.pairRank}) \u2014 beats all one-pair hands`);
+  } else if (handEval.handName === 'Top Pair') {
+    obs.push('Top pair \u2014 good but vulnerable, kicker matters');
+  } else if (handEval.handName === 'Middle Pair' || handEval.handName === 'Bottom Pair') {
+    obs.push(`${handEval.handName} \u2014 weak, caution vs. bets`);
+  } else if (handEval.handName === 'Pocket Pair') {
+    obs.push('Pocket pair below board \u2014 bluff-catcher only');
+  } else {
+    obs.push(`${handEval.handName}${handEval.details.highCard ? ' (' + handEval.details.highCard + ' high)' : ''} \u2014 weak holding`);
+  }
+
+  // Obs 2: Draws / improvement
+  if (draws.includes('flush_draw') && draws.includes('oesd')) {
+    obs.push('Combo draw (flush + straight) \u2014 many outs, powerful');
+  } else if (draws.includes('flush_draw')) {
+    obs.push(`Flush draw \u2014 ${street === 3 ? '~35% by river' : '~19% on river card'}`);
+  } else if (draws.includes('oesd')) {
+    obs.push(`Open-ended straight draw, 8 outs \u2014 ${street === 3 ? '~31.5% by river' : '~17% next card'}`);
+  } else if (draws.includes('gutshot')) {
+    obs.push(`Gutshot, 4 outs \u2014 ${street === 3 ? '~16.5% by river' : '~8.5% next card'}, don't chase`);
+  } else if (handEval.handRank >= 4) {
+    obs.push('No draws needed \u2014 strong made hand, extract value');
+  } else if (street < 5) {
+    obs.push('No strong draws \u2014 slim odds to improve');
+  } else {
+    obs.push('Board complete \u2014 this is your showdown hand');
+  }
+
+  // Obs 3: Board texture
+  const boardVals = community.map(c => RANK_VALUES[c.rank]).sort((a,b) => b - a);
+  const boardSuits = {};
+  community.forEach(c => { boardSuits[c.suit] = (boardSuits[c.suit]||0) + 1; });
+  const monotone = Object.values(boardSuits).some(v => v >= 3);
+  const paired = Object.values((() => { const rc={}; community.forEach(c=>{rc[c.rank]=(rc[c.rank]||0)+1}); return rc; })()).some(v => v >= 2);
+  const connected = (() => {
+    const uv = [...new Set(boardVals)].sort((a,b)=>a-b);
+    for (let i = 0; i < uv.length-2; i++) {
+      if (uv[i+2] - uv[i] <= 4) return true;
+    }
+    return false;
+  })();
+
+  if (monotone && !draws.includes('flush_draw') && handEval.handRank < 6) {
+    obs.push('Flush-heavy board \u2014 no draw = danger');
+  } else if (paired && handEval.handRank < 4) {
+    obs.push('Paired board \u2014 trips/full house possible');
+  } else if (connected && handEval.handRank < 5 && !draws.includes('oesd')) {
+    obs.push('Connected board \u2014 straight possibilities everywhere');
+  } else if (street === 5 && handEval.handRank <= 2) {
+    obs.push('River with marginal hand \u2014 weigh pot odds carefully');
+  } else if (handEval.handRank >= 5) {
+    obs.push('Strong hand \u2014 size bets for max value');
+  } else {
+    obs.push('Position key post-flop \u2014 act last = more info');
+  }
+
+  return obs;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  POST-FLOP LEAN
+// ═══════════════════════════════════════════════════════════════
+function postflopLean(hole, community, handEval, draws) {
+  const street = community.length;
+
+  if (handEval.handRank >= 7) {
+    return { action:'Raise', reason:'Monster \u2014 build the pot now' };
+  }
+  if (handEval.handRank >= 5) {
+    return { action:'Raise', reason:'Strong made hand \u2014 bet for value, charge draws' };
+  }
+  if (handEval.handRank === 4) {
+    return { action:'Raise', reason:'Very strong \u2014 raise while you\'re ahead' };
+  }
+  if (handEval.handName === 'Overpair') {
+    return { action:'Raise', reason:'Overpair \u2014 value bet + protect vs. draws' };
+  }
+  if (handEval.handName === 'Top Pair') {
+    if (draws.includes('flush_draw') || draws.includes('oesd')) {
+      return { action:'Raise', reason:'Top pair + draw \u2014 bet with a backup plan' };
+    }
+    return { action:'Raise', reason:'Top pair \u2014 protect and get value' };
+  }
+  if (handEval.handName === 'Two Pair') {
+    return { action:'Raise', reason:'Two pair \u2014 strong but vulnerable, charge draws' };
+  }
+
+  // Draws
+  if (draws.includes('flush_draw') && draws.includes('oesd')) {
+    return { action:'Raise', reason:'Combo draw \u2014 semi-bluff raise, many outs' };
+  }
+  if (draws.includes('flush_draw')) {
+    if (street === 3) return { action:'Call', reason:'Flush draw ~35% equity \u2014 call or semi-bluff' };
+    if (street === 4) return { action:'It depends', reason:'~19% to flush \u2014 need ~4:1 pot odds' };
+    return { action:'Fold', reason:'Missed flush \u2014 give up without showdown value' };
+  }
+  if (draws.includes('oesd')) {
+    if (street === 3) return { action:'Call', reason:'OESD ~31.5% equity \u2014 worth a call' };
+    if (street === 4) return { action:'It depends', reason:'~17% to straight \u2014 need good pot odds' };
+    return { action:'Fold', reason:'Missed straight draw' };
+  }
+  if (draws.includes('gutshot')) {
+    if (street <= 4) return { action:'Fold', reason:'Gutshot ~4 outs \u2014 don\'t chase weak draws' };
+    return { action:'Fold', reason:'Missed gutshot' };
+  }
+
+  // Weak made hands
+  if (handEval.handName === 'Middle Pair' || handEval.handName === 'Bottom Pair') {
+    if (street === 3) return { action:'Call', reason:'Weak pair \u2014 check-call one street, don\'t over-commit' };
+    return { action:'Fold', reason:'Weak pair vs. continued action \u2014 likely beaten' };
+  }
+  if (handEval.handName === 'Pocket Pair' && handEval.handRank === 2) {
+    return { action:'Fold', reason:'Pocket pair below board \u2014 bluff-catcher at best' };
+  }
+
+  if (street >= 3) {
+    return { action:'Fold', reason:'No pair, no draw \u2014 save your chips' };
+  }
+  return { action:'Fold', reason:'Weak holding \u2014 wait for a better spot' };
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  M-RATIO
+// ═══════════════════════════════════════════════════════════════
+function computeMRatio(stack, sb, bb) {
+  if (!stack || !sb || !bb || sb + bb === 0) return null;
+  return stack / (sb + bb);
+}
+
+function mRatioGuidance(m) {
+  if (m > 20) return { zone:'healthy', cls:'m-healthy', text:`M = ${m.toFixed(1)} \u2014 Healthy, play freely` };
+  if (m > 10) return { zone:'caution', cls:'m-caution', text:`M = ${m.toFixed(1)} \u2014 Shortening, take more risks` };
+  if (m > 6) return { zone:'danger', cls:'m-danger', text:`M = ${m.toFixed(1)} \u2014 Danger zone, raise or fold only` };
+  return { zone:'critical', cls:'m-critical', text:`M = ${m.toFixed(1)} \u2014 Critical! All-in or fold` };
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RENDERING
+// ═══════════════════════════════════════════════════════════════
+function render() {
+  renderProgress();
+  const app = document.getElementById('app');
+
+  switch(state.stage) {
+    case 0: renderHoleCards(app); break;
+    case 1: renderPosition(app); break;
+    case 2: renderPreflop(app); break;
+    case 3: renderFlop(app); break;
+    case 4: renderTurnRiver(app); break;
+  }
+}
+
+function renderProgress() {
+  const bar = document.getElementById('progressBar');
+  let html = '';
+  STAGES.forEach((s, i) => {
+    const dotClass = i < state.stage ? 'done' : i === state.stage ? 'active' : '';
+    const lineClass = i < state.stage ? 'done' : '';
+    html += `<div class="progress-step">`;
+    html += `<div class="progress-dot ${dotClass}">${i < state.stage ? '\u2713' : s.label}</div>`;
+    if (i < STAGES.length - 1) html += `<div class="progress-line ${lineClass}"></div>`;
+    html += `</div>`;
+  });
+  bar.innerHTML = html;
+}
+
+// ── Stage 0: Hole Cards ──
+function renderHoleCards(app) {
+  const neededCards = 2;
+  const picked = state.holeCards.length;
+  const selecting = picked < neededCards;
+  const pickIdx = picked; // index of next card to pick
+
+  let html = `<div class="stage active">`;
+  html += `<div class="stage-title">Your Hole Cards</div>`;
+
+  // Card slots
+  html += `<div class="card-slots">`;
+  for (let i = 0; i < neededCards; i++) {
+    if (i < picked) {
+      const c = state.holeCards[i];
+      const col = cardColor(c.suit);
+      html += `<div class="card-slot filled ${col}" onclick="removeHoleCard(${i})">
+        <span class="card-rank">${c.rank}</span>
+        <span class="card-suit">${SUIT_SYMBOLS[c.suit]}</span>
+      </div>`;
+    } else if (i === pickIdx && selecting) {
+      html += renderPickingSlot();
+    } else {
+      html += `<div class="card-slot">Card ${i+1}</div>`;
+    }
+  }
+  html += `</div>`;
+
+  // Picker — both rank and suit visible at once
+  if (selecting) {
+    html += renderDualPicker();
+  }
+
+  html += `<button class="btn btn-primary" ${picked < neededCards ? 'disabled' : ''} onclick="nextStage()">Choose Position</button>`;
+  html += `<div class="swipe-hint">swipe \u2192 to continue</div>`;
+  html += `</div>`;
+  app.innerHTML = html;
+}
+
+// ── Stage 1: Position ──
+function renderPosition(app) {
+  let html = `<div class="stage active">`;
+  html += `<div class="stage-title">Your Position</div>`;
+  html += `<div class="position-list">`;
+  POSITIONS.forEach(p => {
+    const sel = state.position === p.id ? 'selected' : '';
+    html += `<div class="position-btn ${sel}" onclick="pickPosition('${p.id}')">
+      <span class="pos-name">${p.name}</span>
+      <span class="pos-desc">${p.desc}</span>
+    </div>`;
+  });
+  html += `</div>`;
+  html += `<div class="swipe-hint">\u2190 swipe \u2192</div>`;
+  html += `<button class="btn btn-secondary" onclick="prevStage()">Back</button>`;
+  html += `</div>`;
+  app.innerHTML = html;
+}
+
+// ── Stage 2: Pre-flop ──
+function renderPreflop(app) {
+  const obs = preflopObservations(state.holeCards, state.position);
+  const lean = preflopLean(state.holeCards, state.position);
+  const odds = getOdds(state.holeCards, [], null, []);
+
+  const leanClass = lean.action === 'Raise' ? 'lean-raise' : lean.action === 'Call' ? 'lean-call' : lean.action === 'Fold' ? 'lean-fold' : 'lean-depends';
+
+  let html = `<div class="stage active">`;
+  html += `<div class="stage-title">Pre-Flop Read</div>`;
+
+  // ── Above-the-fold block ──
+  // Hole cards
+  html += `<div class="card-slots" style="margin-bottom:4px;gap:8px">`;
+  state.holeCards.forEach(c => {
+    html += `<div class="card-slot filled ${cardColor(c.suit)}" style="cursor:default;width:42px;height:58px">
+      <span class="card-rank" style="font-size:0.95rem">${c.rank}</span><span class="card-suit" style="font-size:0.8rem">${SUIT_SYMBOLS[c.suit]}</span></div>`;
+  });
+  html += `</div>`;
+
+  // Community card placeholders (5 empty slots)
+  html += `<div class="card-slots community-slots">`;
+  for (let i = 0; i < 5; i++) {
+    const label = i < 3 ? '' : i === 3 ? 'T' : 'R';
+    html += `<div class="card-slot">${label || '?'}</div>`;
+  }
+  html += `</div>`;
+
+  // Hand classification
+  const hType = classifyHandType(state.holeCards[0], state.holeCards[1]);
+  const hKey = handKey(state.holeCards[0], state.holeCards[1]);
+  const hTier = getHandTier(hKey);
+  const hTierLabel = TIER_LABELS[hTier];
+  html += `<div class="hand-class-label"><span class="hc-type">${hType}</span><span class="hc-sep">\u00b7</span><span class="hc-tier">Tier ${hTier} (${hTierLabel})</span></div>`;
+
+  // Lean (above the fold)
+  html += `<div class="analysis-section"><div class="lean-box">`;
+  html += `<div class="lean-label">Suggested Lean</div>`;
+  html += `<div class="lean-action ${leanClass}">${lean.action}</div>`;
+  html += `<div class="lean-reason">${lean.reason}</div>`;
+  html += `</div></div>`;
+
+  // ── Below-the-fold (scrollable) ──
+  // Observations
+  html += `<div class="analysis-section"><h3>Observations</h3>`;
+  obs.forEach(o => { html += `<div class="observation">${o}</div>`; });
+  html += `</div>`;
+
+  // Odds chips
+  html += `<div class="analysis-section"><h3>Probability</h3><div class="chips">`;
+  odds.forEach(o => { html += `<div class="chip">${o.label} <span class="chip-val">${o.value}</span></div>`; });
+  html += `</div></div>`;
+
+  // Tournament mode
+  html += `<div class="tourney-toggle" onclick="toggleTourney()">`;
+  html += `<input type="checkbox" id="tourneyCheck" ${state.tourneyMode ? 'checked' : ''} onclick="event.stopPropagation(); toggleTourney()">`;
+  html += `<label for="tourneyCheck">Tournament Mode (M-Ratio)</label></div>`;
+
+  html += `<div class="tourney-fields ${state.tourneyMode ? 'show' : ''}">`;
+  html += `<div class="tourney-row">`;
+  html += `<div class="tourney-field"><label>Your Stack</label><input type="number" inputmode="numeric" value="${state.tourneyStack}" onchange="updateTourney('stack', this.value)" placeholder="e.g. 15000"></div>`;
+  html += `<div class="tourney-field"><label>Small Blind</label><input type="number" inputmode="numeric" value="${state.tourneySB}" onchange="updateTourney('sb', this.value)" placeholder="e.g. 100"></div>`;
+  html += `<div class="tourney-field"><label>Big Blind</label><input type="number" inputmode="numeric" value="${state.tourneyBB}" onchange="updateTourney('bb', this.value)" placeholder="e.g. 200"></div>`;
+  html += `</div>`;
+
+  if (state.tourneyMode && state.tourneyStack && state.tourneySB && state.tourneyBB) {
+    const m = computeMRatio(Number(state.tourneyStack), Number(state.tourneySB), Number(state.tourneyBB));
+    if (m !== null) {
+      const g = mRatioGuidance(m);
+      html += `<div class="m-ratio-result ${g.cls}">${g.text}</div>`;
+    }
+  }
+  html += `</div>`;
+
+  html += `<div class="swipe-hint">\u2190 swipe \u2192</div>`;
+  html += `</div>`;
+  app.innerHTML = html;
+}
+
+// ── Stages 3 & 4: Post-flop ──
+function renderFlop(app) { renderPostFlop(app, 3, 'Flop', 3); }
+function renderTurnRiver(app) {
+  // 3 cards = picking turn card; 4 cards + not dealing river = show turn analysis;
+  // 4 cards + dealing river = picking river card; 5 cards = show river analysis
+  const n = state.communityCards.length;
+  if (n < 4) {
+    renderPostFlop(app, 4, 'Turn', 1);
+  } else if (n === 4 && !state.dealingRiver) {
+    renderPostFlop(app, 4, 'Turn', 0); // 0 cards needed = show analysis
+  } else if (n === 4 && state.dealingRiver) {
+    renderPostFlop(app, 5, 'River', 1);
+  } else {
+    renderPostFlop(app, 5, 'River', 0);
+  }
+}
+
+function renderPostFlop(app, targetTotal, streetName, cardsNeeded) {
+  const currentCommunity = state.communityCards;
+  const alreadyHave = currentCommunity.length;
+  const stillNeeded = targetTotal - alreadyHave;
+  const selecting = stillNeeded > 0;
+  const picked = alreadyHave;
+
+  let html = `<div class="stage active">`;
+  html += `<div class="stage-title">${streetName}</div>`;
+
+  // Hole cards (small)
+  html += `<div class="card-slots" style="margin-bottom:4px;gap:8px">`;
+  state.holeCards.forEach(c => {
+    html += `<div class="card-slot filled ${cardColor(c.suit)}" style="cursor:default;width:42px;height:58px">
+      <span class="card-rank" style="font-size:0.95rem">${c.rank}</span><span class="card-suit" style="font-size:0.8rem">${SUIT_SYMBOLS[c.suit]}</span></div>`;
+  });
+  html += `</div>`;
+
+  // Community card slots — always show all 5 on one row
+  html += `<div class="card-slots community-slots">`;
+  for (let i = 0; i < 5; i++) {
+    if (i < alreadyHave) {
+      const c = currentCommunity[i];
+      html += `<div class="card-slot filled ${cardColor(c.suit)}" onclick="removeCommunityCard(${i})">
+        <span class="card-rank">${c.rank}</span><span class="card-suit">${SUIT_SYMBOLS[c.suit]}</span></div>`;
+    } else if (i === alreadyHave && i < targetTotal && selecting) {
+      html += renderPickingSlot();
+    } else {
+      const label = i < 3 ? '' : i === 3 ? 'T' : 'R';
+      html += `<div class="card-slot">${label || '?'}</div>`;
+    }
+  }
+  html += `</div>`;
+
+  // Picker — both rank and suit visible at once
+  if (selecting) {
+    html += renderDualPicker();
+  }
+
+  // Analysis (only show when all cards for this street are dealt)
+  if (!selecting) {
+    const handEval = evaluateHand(state.holeCards, currentCommunity);
+    const draws = detectDraws(state.holeCards, currentCommunity);
+    const obs = postflopObservations(state.holeCards, currentCommunity, handEval, draws);
+    const lean = postflopLean(state.holeCards, currentCommunity, handEval, draws);
+    const odds = getOdds(state.holeCards, currentCommunity, handEval, draws);
+
+    const leanClass = lean.action === 'Raise' ? 'lean-raise' : lean.action === 'Call' ? 'lean-call' : lean.action === 'Fold' ? 'lean-fold' : 'lean-depends';
+
+    // Compute river analysis once (if applicable)
+    let ra = null;
+    if (currentCommunity.length === 5) {
+      ra = riverAnalysis(state.holeCards, currentCommunity);
+    }
+
+    // ── Above-the-fold: hand label (slim bar) + nuts badge ──
+    html += `<div class="hand-bar">`;
+    html += `<span class="hand-bar-name">${handEval.handName}</span>`;
+    if (ra) {
+      const badgeClass = ra.isNuts ? 'is-nuts' : ra.nutsRank <= 3 ? 'near-nuts' : 'far-nuts';
+      const ordinal = ra.nutsRank === 1 ? 'The nuts' :
+        ra.nutsRank === 2 ? '2nd nuts' :
+        ra.nutsRank === 3 ? '3rd nuts' :
+        ra.nutsRank + 'th best';
+      html += `<span class="nuts-badge ${badgeClass}" style="margin:0 0 0 8px;font-size:0.75rem;padding:2px 10px">${ordinal}</span>`;
+    }
+    html += `</div>`;
+
+    // Lean (above the fold)
+    html += `<div class="analysis-section"><div class="lean-box">`;
+    html += `<div class="lean-label">Suggested Lean</div>`;
+    html += `<div class="lean-action ${leanClass}">${lean.action}</div>`;
+    html += `<div class="lean-reason">${lean.reason}</div>`;
+      html += `</div></div>`;
+
+    // ── Below-the-fold (scrollable): observations, odds, river panel ──
+    // Observations
+    html += `<div class="analysis-section"><h3>Observations</h3>`;
+    obs.forEach(o => { html += `<div class="observation">${o}</div>`; });
+    html += `</div>`;
+
+    // Odds
+    if (odds.length > 0) {
+      html += `<div class="analysis-section"><h3>Probability</h3><div class="chips">`;
+      odds.forEach(o => { html += `<div class="chip">${o.label} <span class="chip-val">${o.value}</span></div>`; });
+      html += `</div></div>`;
+    }
+
+    // River strength panel (full detail, below the fold)
+    if (ra) {
+      const winNum = parseFloat(ra.winPct);
+      const meterClass = winNum >= 70 ? 'strong' : winNum >= 40 ? 'medium' : 'weak';
+
+      html += `<div class="river-panel">`;
+      html += `<h3>River Strength</h3>`;
+      html += `<div class="river-meter"><div class="river-meter-fill ${meterClass}" style="width:${ra.winPct}%"></div></div>`;
+      html += `<div class="river-stats">`;
+      html += `<div class="river-stat"><div class="rv-num rv-win">${ra.winPct}%</div><div class="rv-label">beat</div></div>`;
+      html += `<div class="river-stat"><div class="rv-num rv-tie">${ra.tiePct}%</div><div class="rv-label">tie</div></div>`;
+      html += `<div class="river-stat"><div class="rv-num rv-lose">${ra.losePct}%</div><div class="rv-label">lose</div></div>`;
+      html += `</div>`;
+
+      if (ra.isNuts) {
+        html += `<div class="beats-list">Nothing beats you \u2014 you have the nuts.</div>`;
+      } else if (ra.beatsYou.length > 0) {
+        html += `<div class="beats-list">Still beats you: ${ra.beatsYou.join(', ')}</div>`;
+      }
+      html += `</div>`;
+    }
+
+    // Next street via swipe
+    if (state.stage === 3 && currentCommunity.length === 3) {
+      // advance handled by swipe
+    } else if (state.stage === 4 && currentCommunity.length === 4) {
+      // deal river handled by swipe
+    }
+  }
+
+  html += `<div class="swipe-hint">\u2190 swipe \u2192</div>`;
+  html += `</div>`;
+  app.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SHARED PICKER RENDERING
+// ═══════════════════════════════════════════════════════════════
+function renderPickingSlot() {
+  const r = state.pickingRank;
+  const s = state.pickingSuit;
+  if (r && s) {
+    // Both selected — shows briefly before commit
+    const col = cardColor(s);
+    return `<div class="card-slot selecting ${col}" style="background:#fff;border-style:solid">
+      <span class="card-rank">${r}</span><span class="card-suit">${SUIT_SYMBOLS[s]}</span></div>`;
+  }
+  if (r) {
+    return `<div class="card-slot selecting" style="font-size:1.2rem;font-weight:700">${r}<span style="font-size:0.7rem;display:block;color:var(--cream-dim)">pick suit</span></div>`;
+  }
+  if (s) {
+    const col = (s==='h'||s==='d') ? 'color:var(--red)' : '';
+    return `<div class="card-slot selecting" style="font-size:1.4rem;${col}">${SUIT_SYMBOLS[s]}<span style="font-size:0.7rem;display:block;color:var(--cream-dim)">pick rank</span></div>`;
+  }
+  return `<div class="card-slot selecting">rank &amp; suit</div>`;
+}
+
+function renderDualPicker() {
+  let html = `<div class="picker-section">`;
+  html += `<div class="picker-label">Rank</div><div class="rank-grid">`;
+  RANKS.forEach(r => {
+    const allUsed = state.pickingSuit ? isUsed(r, state.pickingSuit) : SUITS.every(s => isUsed(r, s));
+    const sel = state.pickingRank === r ? 'selected' : '';
+    html += `<button class="pick-btn ${sel} ${allUsed ? 'disabled' : ''}" onclick="pickRank('${r}')">${r}</button>`;
+  });
+  html += `</div>`;
+  html += `<div class="picker-label" style="margin-top:10px">Suit</div><div class="suit-grid">`;
+  SUITS.forEach(s => {
+    const used = state.pickingRank ? isUsed(state.pickingRank, s) : false;
+    const sel = state.pickingSuit === s ? 'selected' : '';
+    const colClass = `suit-${SUIT_NAMES[s]}`;
+    html += `<button class="pick-btn suit-btn ${colClass} ${sel} ${used ? 'disabled' : ''}" onclick="pickSuit('${s}')">${SUIT_SYMBOLS[s]}</button>`;
+  });
+  html += `</div></div>`;
+  return html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ACTIONS
+// ═══════════════════════════════════════════════════════════════
+function pickRank(r) {
+  if (state.pickingRank === r) { state.pickingRank = null; render(); return; } // toggle off
+  state.pickingRank = r;
+  tryCommitCard();
+}
+
+function pickSuit(s) {
+  if (state.pickingSuit === s) { state.pickingSuit = null; render(); return; } // toggle off
+  state.pickingSuit = s;
+  tryCommitCard();
+}
+
+function tryCommitCard() {
+  if (state.pickingRank && state.pickingSuit) {
+    if (isUsed(state.pickingRank, state.pickingSuit)) {
+      // Combo already taken — clear suit and re-render
+      state.pickingSuit = null;
+      render();
+      return;
+    }
+    const card = { rank: state.pickingRank, suit: state.pickingSuit };
+    state.pickingRank = null;
+    state.pickingSuit = null;
+    if (state.stage === 0) {
+      state.holeCards.push(card);
+    } else {
+      state.communityCards.push(card);
+    }
+  }
+  render();
+}
+
+function removeHoleCard(idx) {
+  state.holeCards.splice(idx);
+  state.pickingRank = null;
+  state.pickingSuit = null;
+  render();
+}
+
+function removeCommunityCard(idx) {
+  state.communityCards.splice(idx);
+  state.pickingRank = null;
+  state.pickingSuit = null;
+  state.dealingRiver = false;
+  render();
+}
+
+function pickPosition(id) {
+  state.position = id;
+  nextStage();
+}
+
+function nextStage() {
+  state.stage++;
+  state.pickingRank = null;
+  state.pickingSuit = null;
+  render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function prevStage() {
+  if (state.stage === 4 && state.communityCards.length > 3) {
+    state.communityCards = state.communityCards.slice(0, 3);
+  }
+  state.stage--;
+  state.pickingRank = null;
+  state.pickingSuit = null;
+  state.dealingRiver = false;
+  render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function dealRiver() {
+  state.dealingRiver = true;
+  state.pickingRank = null;
+  state.pickingSuit = null;
+  render();
+}
+
+function toggleTourney() {
+  state.tourneyMode = !state.tourneyMode;
+  render();
+}
+
+function updateTourney(field, val) {
+  if (field === 'stack') state.tourneyStack = val;
+  if (field === 'sb') state.tourneySB = val;
+  if (field === 'bb') state.tourneyBB = val;
+  render();
+}
+
+function resetHand() {
+  state = {
+    stage: 0,
+    holeCards: [],
+    position: null,
+    communityCards: [],
+    pickingRank: null,
+    pickingSuit: null,
+    dealingRiver: false,
+    tourneyMode: state.tourneyMode,
+    tourneyStack: state.tourneyStack,
+    tourneySB: state.tourneySB,
+    tourneyBB: state.tourneyBB
+  };
+  render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CAN ADVANCE (swipe guard)
+// ═══════════════════════════════════════════════════════════════
+function canAdvance() {
+  switch (state.stage) {
+    case 0: return state.holeCards.length === 2;
+    case 1: return !!state.position;
+    case 2: return true; // pre-flop read is always complete
+    case 3: return state.communityCards.length >= 3;
+    case 4:
+      if (state.communityCards.length === 4) return true;  // can deal river
+      return false; // river is the last stage
+    default: return false;
+  }
+}
+
+function swipeNext() {
+  if (!canAdvance()) return;
+  if (state.stage === 4 && state.communityCards.length === 4) {
+    dealRiver();
+  } else if (state.stage < 4) {
+    nextStage();
+  }
+}
+
+function swipePrev() {
+  if (state.stage > 0) prevStage();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  SWIPE GESTURE HANDLER (touch + mouse)
+// ═══════════════════════════════════════════════════════════════
+(function initSwipe() {
+  const MIN_DX = 60;       // minimum horizontal distance
+  const MAX_RATIO = 0.6;   // max vertical/horizontal ratio (ignore vertical-heavy gestures)
+  let startX = 0, startY = 0, tracking = false;
+
+  function onStart(x, y) {
+    startX = x;
+    startY = y;
+    tracking = true;
+  }
+
+  function onEnd(x, y) {
+    if (!tracking) return;
+    tracking = false;
+    const dx = x - startX;
+    const dy = y - startY;
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
+    if (absDx < MIN_DX) return;          // too short
+    if (absDy / absDx > MAX_RATIO) return; // too vertical
+
+    if (dx > 0) swipePrev();   // swiped right → go back to previous stage
+    else swipeNext();           // swiped left → advance to next stage
+  }
+
+  // Touch events
+  document.addEventListener('touchstart', function(e) {
+    if (e.touches.length === 1) onStart(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e) {
+    if (e.changedTouches.length === 1) onEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+  }, { passive: true });
+
+  // Mouse drag (for desktop testing)
+  let mouseDown = false;
+  document.addEventListener('mousedown', function(e) {
+    // Ignore clicks on buttons/inputs
+    if (e.target.closest('button, input, .pick-btn, .position-btn')) return;
+    mouseDown = true;
+    onStart(e.clientX, e.clientY);
+  });
+
+  document.addEventListener('mouseup', function(e) {
+    if (mouseDown) { mouseDown = false; onEnd(e.clientX, e.clientY); }
+  });
+})();
+
+// ── Init ──
+render();
+</script>
+</body>
+</html>
