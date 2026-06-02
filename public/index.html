@@ -105,11 +105,7 @@ header h1 {
   font-family: 'Crimson Text', Georgia, serif;
 }
 
-.progress-dot.active {
-  background: var(--gold);
-  color: var(--felt-dark);
-}
-
+.progress-dot.active,
 .progress-dot.done {
   background: var(--gold);
   color: var(--felt-dark);
@@ -275,44 +271,6 @@ header h1 {
 .pick-btn.suit-hearts, .pick-btn.suit-diamonds { color: var(--red); }
 .pick-btn.suit-hearts.selected, .pick-btn.suit-diamonds.selected { color: var(--red-dark); background: var(--gold); }
 
-/* ── Action buttons ── */
-.btn {
-  display: block;
-  width: 100%;
-  max-width: 320px;
-  margin: 10px auto 0;
-  padding: 11px;
-  border: none;
-  border-radius: var(--radius);
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-height: 44px;
-}
-
-.btn-primary {
-  background: var(--gold);
-  color: var(--felt-dark);
-}
-
-.btn-primary:active { background: var(--gold-light); transform: scale(0.97); }
-
-.btn-primary:disabled {
-  opacity: 0.35;
-  pointer-events: none;
-}
-
-.btn-secondary {
-  background: rgba(255,255,255,0.1);
-  color: var(--gold);
-  border: 1px solid var(--gold);
-}
-
-.btn-secondary:active { background: rgba(255,255,255,0.2); }
-
-
 /* ── Position selector ── */
 .position-list {
   display: flex;
@@ -447,14 +405,6 @@ header h1 {
   line-height: 1.3;
 }
 
-.lean-disclaimer {
-  font-size: 0.65rem;
-  color: rgba(245,240,225,0.3);
-  text-align: center;
-  margin-top: 3px;
-  font-style: italic;
-}
-
 /* ── Tournament mode ── */
 .tourney-toggle {
   display: flex;
@@ -533,12 +483,6 @@ header h1 {
 .m-caution { background: rgba(230,126,34,0.2); border: 1px solid rgba(230,126,34,0.4); }
 .m-danger { background: rgba(192,57,43,0.2); border: 1px solid rgba(192,57,43,0.4); }
 .m-critical { background: rgba(192,57,43,0.35); border: 1px solid rgba(192,57,43,0.6); }
-
-/* ── New Hand ── */
-.new-hand-wrap {
-  text-align: center;
-  padding: 10px 16px 30px;
-}
 
 /* ── Undo card ── */
 .card-slot.filled { cursor: pointer; }
@@ -753,8 +697,6 @@ let state = {
 function usedCards() {
   return [...state.holeCards, ...state.communityCards];
 }
-
-function cardId(c) { return c.rank + c.suit; }
 
 function isUsed(rank, suit) {
   return usedCards().some(c => c.rank === rank && c.suit === suit);
@@ -1089,9 +1031,7 @@ function riverAnalysis(hole, community) {
   });
   const nutsRank = betterScores.size + 1; // 1 = the nuts
 
-  // What hand types beat the hero?
   const beatsYou = [];
-  const catNames = {9:'a straight flush',8:'four of a kind',7:'a full house',6:'a flush (higher)',5:'a straight (higher)',4:'trips (higher)',3:'two pair (higher)',2:'a pair (higher)',1:'a higher card'};
 
   if (nutsRank === 1) {
     // nothing beats us
@@ -1202,17 +1142,28 @@ function getOdds(hole, community, handEval, draws) {
     return chips;
   }
 
-  if (draws.includes('flush_draw')) {
+  const hasFlush = draws.includes('flush_draw');
+  const hasOESD = draws.includes('oesd');
+  const hasGutshot = draws.includes('gutshot');
+
+  if (hasFlush) {
     if (street === 3) chips.push({ label:'Flush by river', value:'34.97%' });
     else if (street === 4) chips.push({ label:'Flush on river', value:'~19%' });
   }
-  if (draws.includes('oesd')) {
+  if (hasOESD) {
     if (street === 3) chips.push({ label:'Straight by river', value:'31.5%' });
     else if (street === 4) chips.push({ label:'Straight on river', value:'~17%' });
   }
-  if (draws.includes('gutshot')) {
+  if (hasGutshot) {
     if (street === 3) chips.push({ label:'Gutshot by river', value:'~16.5%' });
     else if (street === 4) chips.push({ label:'Gutshot on river', value:'~8.5%' });
+  }
+  if (hasFlush && hasOESD) {
+    if (street === 3) chips.push({ label:'Either by river', value:'~54%' });
+    else if (street === 4) chips.push({ label:'Either on river', value:'~33%' });
+  } else if (hasFlush && hasGutshot) {
+    if (street === 3) chips.push({ label:'Either by river', value:'~45%' });
+    else if (street === 4) chips.push({ label:'Either on river', value:'~25%' });
   }
   if (handEval.handName === 'Set' || (handEval.handRank === 4 && handEval.details.isSet)) {
     if (street <= 4) chips.push({ label:'Full house+ by river', value:'33.4%' });
@@ -1481,6 +1432,22 @@ function mRatioGuidance(m) {
 // ═══════════════════════════════════════════════════════════════
 //  RENDERING
 // ═══════════════════════════════════════════════════════════════
+function leanClass(action) {
+  if (action === 'Raise') return 'lean-raise';
+  if (action === 'Call') return 'lean-call';
+  if (action === 'Fold') return 'lean-fold';
+  return 'lean-depends';
+}
+
+function renderHoleCardsSmall() {
+  let html = `<div class="card-slots" style="margin-bottom:4px;gap:8px">`;
+  state.holeCards.forEach(c => {
+    html += `<div class="card-slot filled ${cardColor(c.suit)}" style="cursor:default;width:42px;height:58px">
+      <span class="card-rank" style="font-size:0.95rem">${c.rank}</span><span class="card-suit" style="font-size:0.8rem">${SUIT_SYMBOLS[c.suit]}</span></div>`;
+  });
+  html += `</div>`;
+  return html;
+}
 function render() {
   renderProgress();
   const app = document.getElementById('app');
@@ -1541,8 +1508,6 @@ function renderHoleCards(app) {
     html += renderDualPicker();
   }
 
-  html += `<button class="btn btn-primary" ${picked < neededCards ? 'disabled' : ''} onclick="nextStage()">Choose Position</button>`;
-  html += `<div class="swipe-hint">swipe \u2192 to continue</div>`;
   html += `</div>`;
   app.innerHTML = html;
 }
@@ -1561,7 +1526,6 @@ function renderPosition(app) {
   });
   html += `</div>`;
   html += `<div class="swipe-hint">\u2190 swipe \u2192</div>`;
-  html += `<button class="btn btn-secondary" onclick="prevStage()">Back</button>`;
   html += `</div>`;
   app.innerHTML = html;
 }
@@ -1572,19 +1536,13 @@ function renderPreflop(app) {
   const lean = preflopLean(state.holeCards, state.position);
   const odds = getOdds(state.holeCards, [], null, []);
 
-  const leanClass = lean.action === 'Raise' ? 'lean-raise' : lean.action === 'Call' ? 'lean-call' : lean.action === 'Fold' ? 'lean-fold' : 'lean-depends';
+  const lc = leanClass(lean.action);
 
   let html = `<div class="stage active">`;
   html += `<div class="stage-title">Pre-Flop Read</div>`;
 
   // ── Above-the-fold block ──
-  // Hole cards
-  html += `<div class="card-slots" style="margin-bottom:4px;gap:8px">`;
-  state.holeCards.forEach(c => {
-    html += `<div class="card-slot filled ${cardColor(c.suit)}" style="cursor:default;width:42px;height:58px">
-      <span class="card-rank" style="font-size:0.95rem">${c.rank}</span><span class="card-suit" style="font-size:0.8rem">${SUIT_SYMBOLS[c.suit]}</span></div>`;
-  });
-  html += `</div>`;
+  html += renderHoleCardsSmall();
 
   // Community card placeholders (5 empty slots)
   html += `<div class="card-slots community-slots">`;
@@ -1604,7 +1562,7 @@ function renderPreflop(app) {
   // Lean (above the fold)
   html += `<div class="analysis-section"><div class="lean-box">`;
   html += `<div class="lean-label">Suggested Lean</div>`;
-  html += `<div class="lean-action ${leanClass}">${lean.action}</div>`;
+  html += `<div class="lean-action ${lc}">${lean.action}</div>`;
   html += `<div class="lean-reason">${lean.reason}</div>`;
   html += `</div></div>`;
 
@@ -1646,39 +1604,32 @@ function renderPreflop(app) {
 }
 
 // ── Stages 3 & 4: Post-flop ──
-function renderFlop(app) { renderPostFlop(app, 3, 'Flop', 3); }
+function renderFlop(app) { renderPostFlop(app, 3, 'Flop'); }
 function renderTurnRiver(app) {
   // 3 cards = picking turn card; 4 cards + not dealing river = show turn analysis;
   // 4 cards + dealing river = picking river card; 5 cards = show river analysis
   const n = state.communityCards.length;
   if (n < 4) {
-    renderPostFlop(app, 4, 'Turn', 1);
+    renderPostFlop(app, 4, 'Turn');
   } else if (n === 4 && !state.dealingRiver) {
-    renderPostFlop(app, 4, 'Turn', 0); // 0 cards needed = show analysis
+    renderPostFlop(app, 4, 'Turn');
   } else if (n === 4 && state.dealingRiver) {
-    renderPostFlop(app, 5, 'River', 1);
+    renderPostFlop(app, 5, 'River');
   } else {
-    renderPostFlop(app, 5, 'River', 0);
+    renderPostFlop(app, 5, 'River');
   }
 }
 
-function renderPostFlop(app, targetTotal, streetName, cardsNeeded) {
+function renderPostFlop(app, targetTotal, streetName) {
   const currentCommunity = state.communityCards;
   const alreadyHave = currentCommunity.length;
-  const stillNeeded = targetTotal - alreadyHave;
-  const selecting = stillNeeded > 0;
-  const picked = alreadyHave;
+  const selecting = alreadyHave < targetTotal;
 
   let html = `<div class="stage active">`;
   html += `<div class="stage-title">${streetName}</div>`;
 
   // Hole cards (small)
-  html += `<div class="card-slots" style="margin-bottom:4px;gap:8px">`;
-  state.holeCards.forEach(c => {
-    html += `<div class="card-slot filled ${cardColor(c.suit)}" style="cursor:default;width:42px;height:58px">
-      <span class="card-rank" style="font-size:0.95rem">${c.rank}</span><span class="card-suit" style="font-size:0.8rem">${SUIT_SYMBOLS[c.suit]}</span></div>`;
-  });
-  html += `</div>`;
+  html += renderHoleCardsSmall();
 
   // Community card slots — always show all 5 on one row
   html += `<div class="card-slots community-slots">`;
@@ -1709,7 +1660,7 @@ function renderPostFlop(app, targetTotal, streetName, cardsNeeded) {
     const lean = postflopLean(state.holeCards, currentCommunity, handEval, draws);
     const odds = getOdds(state.holeCards, currentCommunity, handEval, draws);
 
-    const leanClass = lean.action === 'Raise' ? 'lean-raise' : lean.action === 'Call' ? 'lean-call' : lean.action === 'Fold' ? 'lean-fold' : 'lean-depends';
+    const lc = leanClass(lean.action);
 
     // Compute river analysis once (if applicable)
     let ra = null;
@@ -1733,9 +1684,9 @@ function renderPostFlop(app, targetTotal, streetName, cardsNeeded) {
     // Lean (above the fold)
     html += `<div class="analysis-section"><div class="lean-box">`;
     html += `<div class="lean-label">Suggested Lean</div>`;
-    html += `<div class="lean-action ${leanClass}">${lean.action}</div>`;
+    html += `<div class="lean-action ${lc}">${lean.action}</div>`;
     html += `<div class="lean-reason">${lean.reason}</div>`;
-      html += `</div></div>`;
+    html += `</div></div>`;
 
     // ── Below-the-fold (scrollable): observations, odds, river panel ──
     // Observations
@@ -1772,12 +1723,6 @@ function renderPostFlop(app, targetTotal, streetName, cardsNeeded) {
       html += `</div>`;
     }
 
-    // Next street via swipe
-    if (state.stage === 3 && currentCommunity.length === 3) {
-      // advance handled by swipe
-    } else if (state.stage === 4 && currentCommunity.length === 4) {
-      // deal river handled by swipe
-    }
   }
 
   html += `<div class="swipe-hint">\u2190 swipe \u2192</div>`;
@@ -1855,6 +1800,7 @@ function tryCommitCard() {
     state.pickingSuit = null;
     if (state.stage === 0) {
       state.holeCards.push(card);
+      if (state.holeCards.length === 2) { nextStage(); return; }
     } else {
       state.communityCards.push(card);
     }
