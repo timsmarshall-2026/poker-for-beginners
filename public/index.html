@@ -915,34 +915,38 @@ function evaluateHand(hole, community) {
     return result;
   }
 
-  // One pair
+  // One pair — at least one hole card must participate
   if (pairRanks.length === 1) {
     const pr = pairRanks[0];
-    const holePair = hole[0].rank === hole[1].rank && hole[0].rank === pr;
-    result.handRank = 2;
-    result.details.pairRank = pr;
+    const holeInPair = hole.some(c => c.rank === pr);
+    if (holeInPair) {
+      const holePair = hole[0].rank === hole[1].rank && hole[0].rank === pr;
+      result.handRank = 2;
+      result.details.pairRank = pr;
 
-    if (community.length >= 3) {
-      const boardVals = community.map(c => RANK_VALUES[c.rank]).sort((a,b) => b - a);
-      const pv = RANK_VALUES[pr];
-      if (holePair && pv > boardVals[0]) {
-        result.handName = 'Overpair';
-        result.details.isOverpair = true;
-      } else if (holePair) {
-        result.handName = 'Pocket Pair';
-        result.details.isPocketPair = true;
-      } else if (pv === boardVals[0]) {
-        result.handName = 'Top Pair';
-        result.details.isTopPair = true;
-      } else if (pv === boardVals[1]) {
-        result.handName = 'Middle Pair';
+      if (community.length >= 3) {
+        const boardVals = community.map(c => RANK_VALUES[c.rank]).sort((a,b) => b - a);
+        const pv = RANK_VALUES[pr];
+        if (holePair && pv > boardVals[0]) {
+          result.handName = 'Overpair';
+          result.details.isOverpair = true;
+        } else if (holePair) {
+          result.handName = 'Pocket Pair';
+          result.details.isPocketPair = true;
+        } else if (pv === boardVals[0]) {
+          result.handName = 'Top Pair';
+          result.details.isTopPair = true;
+        } else if (pv === boardVals[1]) {
+          result.handName = 'Middle Pair';
+        } else {
+          result.handName = 'Bottom Pair';
+        }
       } else {
-        result.handName = 'Bottom Pair';
+        result.handName = holePair ? 'Pocket Pair' : 'Pair';
       }
-    } else {
-      result.handName = holePair ? 'Pocket Pair' : 'Pair';
+      return result;
     }
-    return result;
+    // Pair is entirely on the board — fall through to high card
   }
 
   // High card
@@ -1306,14 +1310,14 @@ function preflopLean(hole, position) {
     return { action:'Raise', reason:'Raising hand in position \u2014 take initiative' };
   }
   if (tier === 4) {
-    if (pos === 'early' || pos === 'sb') return { action:'Fold', reason:'Too speculative from this seat' };
+    if (pos === 'early' || pos === 'sb') return { action:'Check / Fold to bet', reason:'Too speculative from this seat' };
     if (pos === 'middle') return { action:'It depends', reason:'Open-raise if folded to you, otherwise fold' };
     if (isPair && high <= 6) return { action:'Call', reason:'Set-mine cheap, don\'t over-invest pre-flop' };
     return { action:'Raise', reason:'Late position \u2014 open wide, steal blinds' };
   }
   if (pos === 'late') return { action:'It depends', reason:'Steal if folded to you, fold to resistance' };
   if (pos === 'bb') return { action:'It depends', reason:'BB discount \u2014 call small raises, fold big ones' };
-  return { action:'Fold', reason:'Weak hand \u2014 save chips for a better spot' };
+  return { action:'Check / Fold to bet', reason:'Weak hand \u2014 save chips for a better spot' };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1338,6 +1342,17 @@ function postflopObservations(hole, community, handEval, draws) {
     obs.push(`${handEval.handName} \u2014 weak, caution vs. bets`);
   } else if (handEval.handName === 'Pocket Pair') {
     obs.push('Pocket pair below board \u2014 bluff-catcher only');
+  } else if (community.length >= 3) {
+    const boardMax = Math.max(...community.map(c => RANK_VALUES[c.rank]));
+    const holeVals = hole.map(c => RANK_VALUES[c.rank]);
+    const overcards = holeVals.filter(v => v > boardMax).length;
+    if (overcards === 2) {
+      obs.push('Two overcards \u2014 ~6 outs to top pair');
+    } else if (overcards === 1) {
+      obs.push('One overcard \u2014 ~3 outs to top pair');
+    } else {
+      obs.push(`${handEval.handName}${handEval.details.highCard ? ' (' + handEval.details.highCard + ' high)' : ''} \u2014 weak holding`);
+    }
   } else {
     obs.push(`${handEval.handName}${handEval.details.highCard ? ' (' + handEval.details.highCard + ' high)' : ''} \u2014 weak holding`);
   }
@@ -1425,31 +1440,31 @@ function postflopLean(hole, community, handEval, draws) {
   if (draws.includes('flush_draw')) {
     if (street === 3) return { action:'Call', reason:'Flush draw ~35% equity \u2014 call or semi-bluff' };
     if (street === 4) return { action:'It depends', reason:'~19% to flush \u2014 need ~4:1 pot odds' };
-    return { action:'Fold', reason:'Missed flush \u2014 give up without showdown value' };
+    return { action:'Check / Fold to bet', reason:'Missed flush \u2014 give up without showdown value' };
   }
   if (draws.includes('oesd')) {
     if (street === 3) return { action:'Call', reason:'OESD ~31.5% equity \u2014 worth a call' };
     if (street === 4) return { action:'It depends', reason:'~17% to straight \u2014 need good pot odds' };
-    return { action:'Fold', reason:'Missed straight draw' };
+    return { action:'Check / Fold to bet', reason:'Missed straight draw' };
   }
   if (draws.includes('gutshot')) {
-    if (street <= 4) return { action:'Fold', reason:'Gutshot ~4 outs \u2014 don\'t chase weak draws' };
-    return { action:'Fold', reason:'Missed gutshot' };
+    if (street <= 4) return { action:'Check / Fold to bet', reason:'Gutshot ~4 outs \u2014 don\'t chase weak draws' };
+    return { action:'Check / Fold to bet', reason:'Missed gutshot' };
   }
 
   // Weak made hands
   if (handEval.handName === 'Middle Pair' || handEval.handName === 'Bottom Pair') {
     if (street === 3) return { action:'Call', reason:'Weak pair \u2014 check-call one street, don\'t over-commit' };
-    return { action:'Fold', reason:'Weak pair vs. continued action \u2014 likely beaten' };
+    return { action:'Check / Fold to bet', reason:'Weak pair vs. continued action \u2014 likely beaten' };
   }
   if (handEval.handName === 'Pocket Pair' && handEval.handRank === 2) {
-    return { action:'Fold', reason:'Pocket pair below board \u2014 bluff-catcher at best' };
+    return { action:'Check / Fold to bet', reason:'Pocket pair below board \u2014 bluff-catcher at best' };
   }
 
   if (street >= 3) {
-    return { action:'Fold', reason:'No pair, no draw \u2014 save your chips' };
+    return { action:'Check / Fold to bet', reason:'No pair, no draw \u2014 save your chips' };
   }
-  return { action:'Fold', reason:'Weak holding \u2014 wait for a better spot' };
+  return { action:'Check / Fold to bet', reason:'Weak holding \u2014 wait for a better spot' };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1525,7 +1540,7 @@ function mRatioGuidance(m) {
 function leanClass(action) {
   if (action === 'Raise') return 'lean-raise';
   if (action === 'Call') return 'lean-call';
-  if (action === 'Fold') return 'lean-fold';
+  if (action === 'Fold' || action === 'Check / Fold to bet') return 'lean-fold';
   return 'lean-depends';
 }
 
