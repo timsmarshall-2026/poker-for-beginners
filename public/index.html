@@ -378,37 +378,18 @@ header h1 {
   border-radius: var(--radius);
 }
 
-.lean-header {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-bottom: 1px;
-}
-
 .lean-label {
   font-size: 0.65rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--cream-dim);
-}
-
-.lean-action {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 1.1rem;
-  font-weight: 700;
+  margin-bottom: 2px;
 }
 
 .lean-raise { color: #e74c3c; }
 .lean-call { color: var(--gold-light); }
 .lean-fold { color: #7f8c8d; }
 .lean-depends { color: #e67e22; }
-
-.lean-reason {
-  font-size: 0.82rem;
-  color: var(--cream-dim);
-  text-align: center;
-  line-height: 1.3;
-}
 
 /* ── Sizing sub-cases ── */
 .sizing-row {
@@ -1299,25 +1280,51 @@ function preflopLean(hole, position) {
   const isPair = hole[0].rank === hole[1].rank;
   const high = Math.max(RANK_VALUES[hole[0].rank], RANK_VALUES[hole[1].rank]);
 
-  if (tier === 1) return { action:'Raise', reason:'Top-tier hand, build the pot' };
-  if (tier === 2) {
-    if (pos === 'early' || pos === 'sb') return { action:'Raise', reason:'Strong enough to raise from any seat' };
-    return { action:'Raise', reason:'Premium \u2014 almost always a raise' };
-  }
+  if (tier === 1) return {
+    first:  { action:'Raise', reason:'Open ~3\u00d7 BB \u2014 build the pot' },
+    facing: { action:'Raise', reason:'Re-raise ~3\u00d7 their raise \u2014 premium hand' }
+  };
+  if (tier === 2) return {
+    first:  { action:'Raise', reason:'Open ~3\u00d7 BB \u2014 strong from any seat' },
+    facing: { action:'Raise', reason:'Re-raise \u2014 too strong to flat-call' }
+  };
   if (tier === 3) {
-    if (pos === 'early') return { action:'It depends', reason:'Borderline early \u2014 raise tight table, fold with action' };
-    if (pos === 'sb') return { action:'Raise', reason:'Raise to avoid multi-way out of position' };
-    return { action:'Raise', reason:'Raising hand in position \u2014 take initiative' };
+    if (pos === 'early') return {
+      first:  { action:'Raise', reason:'Open ~3\u00d7 BB if folded to you' },
+      facing: { action:'Check / Fold to bet', reason:'Borderline early \u2014 fold to a raise' }
+    };
+    return {
+      first:  { action:'Raise', reason:'Open ~3\u00d7 BB \u2014 take initiative' },
+      facing: { action:'Call', reason:'Call one raise, fold to a re-raise' }
+    };
   }
   if (tier === 4) {
-    if (pos === 'early' || pos === 'sb') return { action:'Check / Fold to bet', reason:'Too speculative from this seat' };
-    if (pos === 'middle') return { action:'It depends', reason:'Open-raise if folded to you, otherwise fold' };
-    if (isPair && high <= 6) return { action:'Call', reason:'Set-mine cheap, don\'t over-invest pre-flop' };
-    return { action:'Raise', reason:'Late position \u2014 open wide, steal blinds' };
+    if (pos === 'early' || pos === 'sb') return {
+      first:  { action:'Check / Fold to bet', reason:'Too speculative from this seat' },
+      facing: { action:'Check / Fold to bet', reason:'Fold \u2014 weak hand out of position' }
+    };
+    if (isPair && high <= 6) return {
+      first:  { action:'Raise', reason:'Open small \u2014 or limp to set-mine' },
+      facing: { action:'Call', reason:'Call cheap to set-mine, fold to big raise' }
+    };
+    return {
+      first:  { action:'Raise', reason:'Open ~3\u00d7 BB \u2014 steal the blinds' },
+      facing: { action:'Check / Fold to bet', reason:'Not strong enough to call a raise' }
+    };
   }
-  if (pos === 'late') return { action:'It depends', reason:'Steal if folded to you, fold to resistance' };
-  if (pos === 'bb') return { action:'It depends', reason:'BB discount \u2014 call small raises, fold big ones' };
-  return { action:'Check / Fold to bet', reason:'Weak hand \u2014 save chips for a better spot' };
+  // Tier 5
+  if (pos === 'late') return {
+    first:  { action:'Raise', reason:'Steal if folded to you' },
+    facing: { action:'Check / Fold to bet', reason:'Fold to any raise \u2014 weak hand' }
+  };
+  if (pos === 'bb') return {
+    first:  { action:'Check', reason:'Check your option \u2014 see the flop free' },
+    facing: { action:'It depends', reason:'Call small raise (BB discount), fold big' }
+  };
+  return {
+    first:  { action:'Check / Fold to bet', reason:'Weak hand \u2014 save chips' },
+    facing: { action:'Check / Fold to bet', reason:'Fold \u2014 wait for a better spot' }
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1410,61 +1417,103 @@ function postflopObservations(hole, community, handEval, draws) {
 // ═══════════════════════════════════════════════════════════════
 function postflopLean(hole, community, handEval, draws) {
   const street = community.length;
+  const sz = 'Bet ~\u00bd\u2013\u00be pot';
+  const rsz = 'Raise ~3\u00d7 their bet';
 
-  if (handEval.handRank >= 7) {
-    return { action:'Raise', reason:'Monster \u2014 build the pot now' };
-  }
-  if (handEval.handRank >= 5) {
-    return { action:'Raise', reason:'Strong made hand \u2014 bet for value, charge draws' };
-  }
-  if (handEval.handRank === 4) {
-    return { action:'Raise', reason:'Very strong \u2014 raise while you\'re ahead' };
-  }
-  if (handEval.handName === 'Overpair') {
-    return { action:'Raise', reason:'Overpair \u2014 value bet + protect vs. draws' };
-  }
-  if (handEval.handName === 'Top Pair') {
-    if (draws.includes('flush_draw') || draws.includes('oesd')) {
-      return { action:'Raise', reason:'Top pair + draw \u2014 bet with a backup plan' };
-    }
-    return { action:'Raise', reason:'Top pair \u2014 protect and get value' };
-  }
-  if (handEval.handName === 'Two Pair') {
-    return { action:'Raise', reason:'Two pair \u2014 strong but vulnerable, charge draws' };
-  }
+  // Strong made hands — bet or raise either way
+  if (handEval.handRank >= 7) return {
+    first:  { action:'Raise', reason:`${sz} \u2014 monster, build the pot` },
+    facing: { action:'Raise', reason:`${rsz} \u2014 you want action` }
+  };
+  if (handEval.handRank >= 5) return {
+    first:  { action:'Raise', reason:`${sz} \u2014 value bet, charge draws` },
+    facing: { action:'Raise', reason:`${rsz} \u2014 strong hand, make them pay` }
+  };
+  if (handEval.handRank === 4) return {
+    first:  { action:'Raise', reason:`${sz} \u2014 very strong${handEval.details.isSet ? ', disguised' : ''}` },
+    facing: { action:'Raise', reason:`${rsz} \u2014 ahead of most hands` }
+  };
+  if (handEval.handName === 'Overpair') return {
+    first:  { action:'Raise', reason:`${sz} \u2014 overpair, protect vs. draws` },
+    facing: { action:'Raise', reason:`${rsz} \u2014 beats all one-pair hands` }
+  };
+  if (handEval.handName === 'Top Pair') return {
+    first:  { action:'Raise', reason:`${sz} \u2014 top pair, get value + protect` },
+    facing: { action:'Call', reason:'Call \u2014 good hand but don\'t bloat the pot' }
+  };
+  if (handEval.handName === 'Two Pair') return {
+    first:  { action:'Raise', reason:`${sz} \u2014 strong but vulnerable, charge draws` },
+    facing: { action:'Raise', reason:`${rsz} \u2014 punish draws, build the pot` }
+  };
 
   // Draws
-  if (draws.includes('flush_draw') && draws.includes('oesd')) {
-    return { action:'Raise', reason:'Combo draw \u2014 semi-bluff raise, many outs' };
-  }
+  if (draws.includes('flush_draw') && draws.includes('oesd')) return {
+    first:  { action:'Raise', reason:`${sz} \u2014 semi-bluff, ~54% equity` },
+    facing: { action:'Call', reason:'Call \u2014 combo draw, many outs' }
+  };
   if (draws.includes('flush_draw')) {
-    if (street === 3) return { action:'Call', reason:'Flush draw ~35% equity \u2014 call or semi-bluff' };
-    if (street === 4) return { action:'It depends', reason:'~19% to flush \u2014 need ~4:1 pot odds' };
-    return { action:'Check / Fold to bet', reason:'Missed flush \u2014 give up without showdown value' };
+    if (street === 3) return {
+      first:  { action:'Raise', reason:'Bet small \u2014 semi-bluff, ~35% to hit' },
+      facing: { action:'Call', reason:'Call if < \u2153 pot \u2014 flush draw ~35%' }
+    };
+    if (street === 4) return {
+      first:  { action:'Check', reason:'Check \u2014 ~19% to hit, take a free card' },
+      facing: { action:'It depends', reason:'Call only if < \u2155 pot \u2014 ~19% odds' }
+    };
+    return {
+      first:  { action:'Check / Fold to bet', reason:'Missed flush \u2014 check and give up' },
+      facing: { action:'Check / Fold to bet', reason:'Missed flush \u2014 fold to a bet' }
+    };
   }
   if (draws.includes('oesd')) {
-    if (street === 3) return { action:'Call', reason:'OESD ~31.5% equity \u2014 worth a call' };
-    if (street === 4) return { action:'It depends', reason:'~17% to straight \u2014 need good pot odds' };
-    return { action:'Check / Fold to bet', reason:'Missed straight draw' };
+    if (street === 3) return {
+      first:  { action:'Raise', reason:'Bet small \u2014 semi-bluff, ~31% to hit' },
+      facing: { action:'Call', reason:'Call if < \u2153 pot \u2014 OESD ~31%' }
+    };
+    if (street === 4) return {
+      first:  { action:'Check', reason:'Check \u2014 ~17% to hit, take a free card' },
+      facing: { action:'It depends', reason:'Call only if cheap \u2014 ~17% odds' }
+    };
+    return {
+      first:  { action:'Check / Fold to bet', reason:'Missed straight draw' },
+      facing: { action:'Check / Fold to bet', reason:'Missed \u2014 fold to a bet' }
+    };
   }
   if (draws.includes('gutshot')) {
-    if (street <= 4) return { action:'Check / Fold to bet', reason:'Gutshot ~4 outs \u2014 don\'t chase weak draws' };
-    return { action:'Check / Fold to bet', reason:'Missed gutshot' };
+    if (street <= 4) return {
+      first:  { action:'Check', reason:'Check \u2014 gutshot, take a free card' },
+      facing: { action:'Check / Fold to bet', reason:'Fold \u2014 4 outs, don\'t chase' }
+    };
+    return {
+      first:  { action:'Check / Fold to bet', reason:'Missed gutshot' },
+      facing: { action:'Check / Fold to bet', reason:'Missed \u2014 fold to a bet' }
+    };
   }
 
   // Weak made hands
   if (handEval.handName === 'Middle Pair' || handEval.handName === 'Bottom Pair') {
-    if (street === 3) return { action:'Call', reason:'Weak pair \u2014 check-call one street, don\'t over-commit' };
-    return { action:'Check / Fold to bet', reason:'Weak pair vs. continued action \u2014 likely beaten' };
+    if (street === 3) return {
+      first:  { action:'Check', reason:'Check \u2014 weak pair, don\'t build the pot' },
+      facing: { action:'Call', reason:'Call one small bet \u2014 don\'t over-commit' }
+    };
+    return {
+      first:  { action:'Check / Fold to bet', reason:'Check \u2014 weak pair, likely beaten' },
+      facing: { action:'Check / Fold to bet', reason:'Fold \u2014 weak pair vs. continued action' }
+    };
   }
-  if (handEval.handName === 'Pocket Pair' && handEval.handRank === 2) {
-    return { action:'Check / Fold to bet', reason:'Pocket pair below board \u2014 bluff-catcher at best' };
-  }
+  if (handEval.handName === 'Pocket Pair' && handEval.handRank === 2) return {
+    first:  { action:'Check / Fold to bet', reason:'Check \u2014 pocket pair below board' },
+    facing: { action:'Check / Fold to bet', reason:'Fold \u2014 bluff-catcher at best' }
+  };
 
-  if (street >= 3) {
-    return { action:'Check / Fold to bet', reason:'No pair, no draw \u2014 save your chips' };
-  }
-  return { action:'Check / Fold to bet', reason:'Weak holding \u2014 wait for a better spot' };
+  if (street >= 3) return {
+    first:  { action:'Check / Fold to bet', reason:'Check \u2014 no pair, no draw' },
+    facing: { action:'Check / Fold to bet', reason:'Fold \u2014 save your chips' }
+  };
+  return {
+    first:  { action:'Check / Fold to bet', reason:'Check \u2014 weak holding' },
+    facing: { action:'Check / Fold to bet', reason:'Fold \u2014 wait for a better spot' }
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1487,36 +1536,17 @@ function strategicLabel(handEval, draws) {
 // ═══════════════════════════════════════════════════════════════
 //  SIZING / POT-ODDS NOTE
 // ═══════════════════════════════════════════════════════════════
-function sizingHTML(action, street, draws) {
-  if (action === 'Raise') {
-    const betSize = street === 0 ? 'Open ~3\u00d7 BB (+1 per limper)' : 'Bet ~\u00bd\u2013\u00be pot';
-    const betWhy = street === 0 ? 'Build the pot, thin the field' : 'Value bet, charge draws';
-    const raiseSize = street === 0 ? 'Re-raise ~3\u00d7 their raise' : 'Raise to ~3\u00d7 their bet';
-    const raiseWhy = 'Make them pay, fold out weaker';
-    return `<div class="sizing-row">`
-      + `<div class="sizing-case"><div class="sizing-case-label">Bet (first to act)</div><div class="sizing-case-size">${betSize}</div><div class="sizing-case-why">${betWhy}</div></div>`
-      + `<div class="sizing-case"><div class="sizing-case-label">Raise (facing a bet)</div><div class="sizing-case-size">${raiseSize}</div><div class="sizing-case-why">${raiseWhy}</div></div>`
-      + `</div>`;
-  }
-  if (action === 'Call') {
-    const hasFlush = draws.includes('flush_draw');
-    const hasOESD = draws.includes('oesd');
-    const hasGutshot = draws.includes('gutshot');
-    let note = '';
-    if (hasFlush && hasOESD) {
-      note = street === 3 ? 'Combo draw ~54% \u2014 call up to half the pot easily' : 'Combo draw ~33% \u2014 call if cost < \u2153 pot';
-    } else if (hasFlush) {
-      note = street === 3 ? '~35% to hit \u2014 call if cost < \u2153 pot (e.g. 100 into 400+)' : '~19% to hit \u2014 only call if cost < \u2155 pot';
-    } else if (hasOESD) {
-      note = street === 3 ? '~31% to hit \u2014 call if cost < \u2153 pot' : '~17% to hit \u2014 only call if cost < \u2155 pot';
-    } else if (hasGutshot) {
-      note = street === 3 ? '~16% \u2014 only call if very cheap relative to pot' : '~8.5% \u2014 gutshot rarely justifies a call';
-    } else {
-      note = 'Call if the price is small relative to the pot';
-    }
-    return `<div class="lean-reason" style="margin-top:2px;font-size:0.78rem;opacity:0.7">${note}</div>`;
-  }
-  return '';
+function renderLeanHTML(lean) {
+  const fc = leanClass(lean.first.action);
+  const rc = leanClass(lean.facing.action);
+  return `<div class="sizing-row">`
+    + `<div class="sizing-case"><div class="sizing-case-label">First to act</div>`
+    + `<div class="sizing-case-size ${fc}">${lean.first.action}</div>`
+    + `<div class="sizing-case-why">${lean.first.reason}</div></div>`
+    + `<div class="sizing-case"><div class="sizing-case-label">Facing a bet</div>`
+    + `<div class="sizing-case-size ${rc}">${lean.facing.action}</div>`
+    + `<div class="sizing-case-why">${lean.facing.reason}</div></div>`
+    + `</div>`;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1540,7 +1570,7 @@ function mRatioGuidance(m) {
 function leanClass(action) {
   if (action === 'Raise') return 'lean-raise';
   if (action === 'Call') return 'lean-call';
-  if (action === 'Fold' || action === 'Check / Fold to bet') return 'lean-fold';
+  if (action === 'Check' || action === 'Fold' || action === 'Check / Fold to bet') return 'lean-fold';
   return 'lean-depends';
 }
 
@@ -1647,8 +1677,6 @@ function renderPreflop(app) {
   const lean = preflopLean(state.holeCards, state.position);
   const odds = getOdds(state.holeCards, [], null, []);
 
-  const lc = leanClass(lean.action);
-
   let html = `<div class="stage active">`;
   html += `<div class="stage-title">Pre-Flop Read</div>`;
 
@@ -1670,11 +1698,10 @@ function renderPreflop(app) {
   const hTierLabel = TIER_LABELS[hTier];
   html += `<div class="hand-class-label"><span class="hc-type">${hType}</span><span class="hc-sep">\u00b7</span><span class="hc-tier">Tier ${hTier} (${hTierLabel})</span></div>`;
 
-  // Lean (above the fold) — single-line header
+  // Lean (above the fold)
   html += `<div class="analysis-section"><div class="lean-box">`;
-  html += `<div class="lean-header"><span class="lean-label">Suggested lean:</span><span class="lean-action ${lc}">${lean.action}</span></div>`;
-  html += `<div class="lean-reason">${lean.reason}</div>`;
-  html += sizingHTML(lean.action, 0, []);
+  html += `<div class="lean-label">Suggested Lean</div>`;
+  html += renderLeanHTML(lean);
   html += `</div></div>`;
 
   // ── Below-the-fold (scrollable) ──
@@ -1725,14 +1752,13 @@ function renderPostFlop(app, targetTotal, streetName) {
   const selecting = alreadyHave < targetTotal;
 
   // Pre-compute analysis so we can use the label in the hole-card row
-  let handEval, draws, obs, lean, odds, lc, ra;
+  let handEval, draws, obs, lean, odds, ra;
   if (!selecting) {
     handEval = evaluateHand(state.holeCards, currentCommunity);
     draws = detectDraws(state.holeCards, currentCommunity);
     obs = postflopObservations(state.holeCards, currentCommunity, handEval, draws);
     lean = postflopLean(state.holeCards, currentCommunity, handEval, draws);
     odds = getOdds(state.holeCards, currentCommunity, handEval, draws);
-    lc = leanClass(lean.action);
     ra = currentCommunity.length === 5 ? riverAnalysis(state.holeCards, currentCommunity) : null;
   }
 
@@ -1774,11 +1800,10 @@ function renderPostFlop(app, targetTotal, streetName) {
 
   // Analysis (only show when all cards for this street are dealt)
   if (!selecting) {
-    // Lean (above the fold) — single-line header
+    // Lean (above the fold)
     html += `<div class="analysis-section"><div class="lean-box">`;
-    html += `<div class="lean-header"><span class="lean-label">Suggested lean:</span><span class="lean-action ${lc}">${lean.action}</span></div>`;
-    html += `<div class="lean-reason">${lean.reason}</div>`;
-    html += sizingHTML(lean.action, currentCommunity.length, draws);
+    html += `<div class="lean-label">Suggested Lean</div>`;
+    html += renderLeanHTML(lean);
     html += `</div></div>`;
 
     // ── Below-the-fold (scrollable): observations, odds, river panel ──
