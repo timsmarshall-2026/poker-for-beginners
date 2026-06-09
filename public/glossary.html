@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poker Glossary</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Crimson+Text:wght@400;600;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --felt: #0b5e2f;
+  --felt-dark: #073d1e;
+  --felt-light: #0d7a3c;
+  --gold: #d4a843;
+  --gold-light: #f0d078;
+  --cream: #f5f0e1;
+  --cream-dim: #d9d2c0;
+  --red: #c0392b;
+  --shadow: rgba(0,0,0,0.35);
+  --radius: 10px;
+}
+
+html, body {
+  font-family: 'Crimson Text', Georgia, serif;
+  background: var(--felt-dark);
+  color: var(--cream);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body {
+  background: radial-gradient(ellipse at 50% 30%, var(--felt-light), var(--felt) 50%, var(--felt-dark) 100%);
+  min-height: 100vh;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 16px 6px;
+  position: relative;
+}
+
+header h1 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.5rem;
+  color: var(--gold);
+  text-shadow: 0 2px 4px var(--shadow);
+  letter-spacing: 0.03em;
+}
+
+.back-btn {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(192,57,43,0.2);
+  color: var(--red);
+  border: 1px solid var(--red);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-family: 'Crimson Text', Georgia, serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.back-btn:active { background: rgba(192,57,43,0.35); transform: translateY(-50%) scale(0.95); }
+
+.glossary {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 12px 18px 80px;
+}
+
+.glossary dl {
+  display: block;
+}
+
+.glossary dt {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.1rem;
+  color: var(--gold);
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(212,168,67,0.15);
+}
+
+.glossary dt:first-of-type {
+  border-top: none;
+  margin-top: 8px;
+  padding-top: 0;
+}
+
+.glossary dd {
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--cream-dim);
+  margin: 4px 0 0 0;
+}
+
+@media (min-width: 480px) {
+  header h1 { font-size: 2rem; }
+  .glossary dt { font-size: 1.2rem; }
+  .glossary dd { font-size: 1.1rem; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" class="back-btn">&larr; Poker Helper</a>
+  <h1>Glossary</h1>
+</header>
+
+<div class="glossary">
+<dl>
+
+<dt>ABC Poker</dt>
+<dd>A straightforward, by-the-book style of play. Bet strong hands, fold weak ones, avoid fancy bluffs. Ideal for beginners.</dd>
+
+<dt>Bet</dt>
+<dd>Putting chips into the pot when no one else has bet in the current round. Forces opponents to call, raise, or fold.</dd>
+
+<dt>Big Blind</dt>
+<dd>A forced bet posted by the player two seats left of the dealer button before cards are dealt. Sets the minimum bet size for the hand.</dd>
+
+<dt>Board</dt>
+<dd>See <em>Community Cards</em>.</dd>
+
+<dt>Call</dt>
+<dd>Matching the current bet to stay in the hand. You put in exactly what the previous player bet or raised.</dd>
+
+<dt>Check</dt>
+<dd>Passing the action to the next player without betting, only allowed when no one has bet in the current round. Keeps you in the hand for free.</dd>
+
+<dt>Check-Fold</dt>
+<dd>Checking when first to act, then folding if an opponent bets. A common line with weak hands when you want a free card but won't pay to continue.</dd>
+
+<dt>Combo Draw</dt>
+<dd>Having two draws at once, such as a flush draw plus a straight draw. Gives you many outs and strong equity even without a made hand yet.</dd>
+
+<dt>Community Cards</dt>
+<dd>The five shared cards dealt face-up in the middle of the table (flop, turn, river). Every player uses them with their hole cards to make the best five-card hand. Also called the <em>board</em>.</dd>
+
+<dt>Connectors</dt>
+<dd>Two cards of consecutive rank, like 9-10 or J-Q. They have straight potential because they're already one step apart.</dd>
+
+<dt>Draw</dt>
+<dd>A hand that isn't complete yet but could improve to a strong hand with the right card. For example, four cards to a flush is a flush draw.</dd>
+
+<dt>Early Position</dt>
+<dd>The first seats to act after the blinds. A tough spot because many players act after you, so you need stronger hands to play here.</dd>
+
+<dt>Equity</dt>
+<dd>Your share of the pot based on how likely you are to win. If you'd win half the time, you have 50% equity.</dd>
+
+<dt>Flop</dt>
+<dd>The first three community cards dealt face-up at once. The flop is a pivotal moment where you see most of the board and can assess your hand strength.</dd>
+
+<dt>Flush</dt>
+<dd>Five cards of the same suit (e.g. all hearts). A strong hand that beats a straight but loses to a full house.</dd>
+
+<dt>Flush Draw</dt>
+<dd>Having four cards of the same suit, needing one more to complete a flush. A strong draw with roughly a 35% chance of hitting by the river (from the flop).</dd>
+
+<dt>Fold</dt>
+<dd>Giving up your hand and any chips you've put in the pot. You're out of the hand but lose nothing more.</dd>
+
+<dt>Full House</dt>
+<dd>Three of a kind plus a pair (e.g. three Kings and two Fives). A very strong hand that beats flushes and straights.</dd>
+
+<dt>Gutshot</dt>
+<dd>A straight draw needing one specific card in the middle to complete. For example, holding 5-7 on a board of 8-9-K, you need a 6. Also called an <em>inside straight draw</em>. Only about 4 outs.</dd>
+
+<dt>High Card</dt>
+<dd>A hand with no pair, no draw, nothing. Your best card is all you've got. The weakest possible holding at showdown.</dd>
+
+<dt>Hole Cards</dt>
+<dd>The two private cards dealt face-down to each player at the start of the hand. Only you can see them.</dd>
+
+<dt>Inside Straight Draw</dt>
+<dd>See <em>Gutshot</em>.</dd>
+
+<dt>Kicker</dt>
+<dd>The highest unpaired side card that breaks ties. If two players both have a pair of Aces, the one with the higher kicker wins.</dd>
+
+<dt>Late Position / Button</dt>
+<dd>The last seats to act, including the dealer button. The best position because you see what everyone else does before you decide. More hands are playable here.</dd>
+
+<dt>M-Ratio</dt>
+<dd>Your chip stack divided by the cost of one orbit of blinds (small blind + big blind). Tells you how urgently you need to act in a tournament. Below 10 means you're getting short.</dd>
+
+<dt>Middle Pair</dt>
+<dd>Pairing one of your hole cards with a middle-ranked board card (not the highest or lowest). Decent but vulnerable to overcards.</dd>
+
+<dt>Middle Position</dt>
+<dd>The seats between early and late position. You have some information but still face several players behind you.</dd>
+
+<dt>The Nuts</dt>
+<dd>The best possible hand given the current board. If you have the nuts, no one can beat you.</dd>
+
+<dt>Open-Ended Straight Draw (OESD)</dt>
+<dd>Four consecutive cards that can complete a straight on either end. For example, 7-8-9-10 can make a straight with a 6 or a J. Eight outs, roughly 31.5% to hit by the river.</dd>
+
+<dt>Outs</dt>
+<dd>The number of unseen cards that would improve your hand. More outs means a better chance of hitting your draw.</dd>
+
+<dt>Overcard</dt>
+<dd>A hole card ranked higher than any card on the board. Overcards give you outs to make top pair if one hits.</dd>
+
+<dt>Overpair</dt>
+<dd>A pocket pair higher than every card on the board. For example, holding Q-Q on a J-8-3 board. Beats all single-pair hands.</dd>
+
+<dt>Pair</dt>
+<dd>Two cards of the same rank. The most common made hand, and the starting point for hand strength. Higher pairs beat lower ones.</dd>
+
+<dt>Pocket Pair</dt>
+<dd>Both hole cards are the same rank (e.g. 8-8). You start the hand with a pair already made. Small pairs hope to flop a set; big pairs are strong on their own.</dd>
+
+<dt>Position</dt>
+<dd>Where you sit relative to the dealer button, which determines when you act. Acting later is a big advantage because you see what others do first.</dd>
+
+<dt>Pot</dt>
+<dd>The total chips in the middle that players are competing to win. Grows with each bet, call, or raise.</dd>
+
+<dt>Pot Odds</dt>
+<dd>The ratio of the current pot size to the cost of calling a bet. If the pot is 100 and you must call 20, you're getting 5-to-1. Compare to your chance of winning to decide if calling is profitable.</dd>
+
+<dt>Pre-Flop</dt>
+<dd>The first betting round, after hole cards are dealt but before any community cards. This is where you decide whether your starting hand is worth playing.</dd>
+
+<dt>Quads / Four of a Kind</dt>
+<dd>Four cards of the same rank (e.g. four Jacks). An extremely strong hand that beats a full house.</dd>
+
+<dt>Raise</dt>
+<dd>Increasing the current bet, forcing opponents to put in more chips to stay in. Shows strength and builds the pot.</dd>
+
+<dt>River</dt>
+<dd>The fifth and final community card. After the river, there are no more cards to come. Your hand is final and you either bet for value, bluff, or check it down.</dd>
+
+<dt>Royal Flush</dt>
+<dd>A-K-Q-J-10 all of the same suit. The best possible hand in poker. Extremely rare.</dd>
+
+<dt>Semi-Bluff</dt>
+<dd>Betting or raising with a draw (not the best hand yet) that could improve to a winner. You can win by making opponents fold now, or by hitting your draw later.</dd>
+
+<dt>Set</dt>
+<dd>Three of a kind made with a pocket pair plus one matching board card. A disguised and powerful hand because opponents can't easily see it.</dd>
+
+<dt>Small Blind</dt>
+<dd>A forced bet posted by the player directly left of the dealer button, typically half the big blind. You act first in every post-flop round from this seat.</dd>
+
+<dt>Stack</dt>
+<dd>The total chips a player has in front of them. Your stack size affects which plays are available and how aggressively you can bet.</dd>
+
+<dt>Straight</dt>
+<dd>Five cards in consecutive rank (e.g. 4-5-6-7-8). Beats three of a kind but loses to a flush.</dd>
+
+<dt>Straight Flush</dt>
+<dd>Five consecutive cards all of the same suit (e.g. 5-6-7-8-9 of clubs). Beats quads. The second-best hand in poker.</dd>
+
+<dt>Suited</dt>
+<dd>Two hole cards of the same suit (e.g. both diamonds). Gives flush potential and slightly increases the hand's value.</dd>
+
+<dt>Suited Connectors</dt>
+<dd>Two consecutive cards of the same suit (e.g. 7-8 of hearts). Speculative hands with both straight and flush potential.</dd>
+
+<dt>Suited Gappers</dt>
+<dd>Two same-suit cards with a small gap in rank (e.g. 6-8 of spades). Similar to suited connectors but with slightly less straight potential.</dd>
+
+<dt>Three of a Kind</dt>
+<dd>Three cards of the same rank. When made with a pocket pair plus one board card, it's called a <em>set</em>. When made with one hole card and two board cards, it's called <em>trips</em>.</dd>
+
+<dt>Top Pair</dt>
+<dd>Pairing one of your hole cards with the highest card on the board. A good hand, but your kicker matters a lot.</dd>
+
+<dt>Trips</dt>
+<dd>Three of a kind made using one hole card and two matching board cards. Less disguised than a set because the pair is visible on the board.</dd>
+
+<dt>Turn</dt>
+<dd>The fourth community card, dealt after the flop betting round. One more card to come after this.</dd>
+
+<dt>Two Pair</dt>
+<dd>Two different pairs in the same hand (e.g. Jacks and Fives). Strong but vulnerable to straights, flushes, and full houses.</dd>
+
+<dt>Underpair</dt>
+<dd>A pocket pair lower than every card on the board. A weak holding that usually needs to improve to a set to win.</dd>
+
+</dl>
+</div>
+
+</body>
+</html>

@@ -75,6 +75,27 @@ header h1 {
 
 .reset-btn:active { background: rgba(192,57,43,0.35); transform: translateY(-50%) scale(0.95); }
 
+.glossary-btn {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(192,57,43,0.2);
+  color: var(--red);
+  border: 1px solid var(--red);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-family: 'Crimson Text', Georgia, serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.glossary-btn:active { background: rgba(192,57,43,0.35); transform: translateY(-50%) scale(0.95); }
+
 /* ── Progress ── */
 .progress-bar {
   display: flex;
@@ -651,6 +672,7 @@ header h1 {
 <body>
 
 <header>
+  <a href="glossary.html" target="_blank" class="glossary-btn">Glossary</a>
   <h1>Poker Helper</h1>
   <button class="reset-btn" onclick="resetHand()">New Hand</button>
 </header>
