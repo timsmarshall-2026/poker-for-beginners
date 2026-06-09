@@ -1163,6 +1163,38 @@ function detectDraws(hole, community) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  DRAW RELEVANCE FILTER
+//  Only keep draws that would actually improve the current hand.
+// ═══════════════════════════════════════════════════════════════
+function filterDraws(draws, hole, community, handEval) {
+  const rank = handEval.handRank;
+  let filtered = [...draws];
+
+  // Flush draw irrelevant if already flush or better
+  if (rank >= 6) filtered = filtered.filter(d => d !== 'flush_draw');
+
+  // Straight draws irrelevant if already straight or better
+  if (rank >= 5) filtered = filtered.filter(d => d !== 'oesd' && d !== 'gutshot');
+
+  // Special: if holding a flush, check for straight flush draw
+  if (rank === 6 && handEval.details.flushSuit) {
+    const all = [...hole, ...community];
+    const suitCards = all.filter(c => c.suit === handEval.details.flushSuit);
+    const suitVals = [...new Set(suitCards.map(c => RANK_VALUES[c.rank]))].sort((a,b) => a - b);
+    if (suitVals.includes(14)) suitVals.unshift(1);
+    for (let low = 1; low <= 10; low++) {
+      const w = [low, low+1, low+2, low+3, low+4];
+      if (w.filter(v => suitVals.includes(v)).length === 4) {
+        filtered.push('sf_draw');
+        break;
+      }
+    }
+  }
+
+  return filtered;
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  ODDS ENGINE
 // ═══════════════════════════════════════════════════════════════
 function getOdds(hole, community, handEval, draws) {
@@ -1398,6 +1430,8 @@ function postflopObservations(hole, community, handEval, draws) {
       obs.push(`Open-ended straight draw, 8 outs \u2014 ${street === 3 ? '~31.5% by river' : '~17% next card'}`);
     } else if (draws.includes('gutshot')) {
       obs.push(`Gutshot, 4 outs \u2014 ${street === 3 ? '~16.5% by river' : '~8.5% next card'}, don't chase`);
+    } else if (draws.includes('sf_draw')) {
+      obs.push('Straight flush draw \u2014 1\u20132 outs to a monster');
     } else if (handEval.handRank >= 4) {
       obs.push('No draws needed \u2014 strong made hand, extract value');
     } else {
@@ -1803,7 +1837,7 @@ function renderPostFlop(app, targetTotal, streetName) {
   let handEval, draws, obs, lean, odds, ra;
   if (!selecting) {
     handEval = evaluateHand(state.holeCards, currentCommunity);
-    draws = detectDraws(state.holeCards, currentCommunity);
+    draws = filterDraws(detectDraws(state.holeCards, currentCommunity), state.holeCards, currentCommunity, handEval);
     ra = currentCommunity.length === 5 ? riverAnalysis(state.holeCards, currentCommunity) : null;
     obs = postflopObservations(state.holeCards, currentCommunity, handEval, draws);
     lean = postflopLean(state.holeCards, currentCommunity, handEval, draws, ra);
