@@ -1341,6 +1341,8 @@ function postflopObservations(hole, community, handEval, draws) {
     obs.push(`${handEval.handName} \u2014 strong made hand, bet for value`);
   } else if (handEval.handRank === 4) {
     obs.push(`${handEval.handName} \u2014 very strong${handEval.details.isSet ? ', disguised' : ''}`);
+  } else if (handEval.handName === 'Two Pair') {
+    obs.push('Two pair \u2014 strong but vulnerable to straights and flushes');
   } else if (handEval.handName === 'Overpair') {
     obs.push(`Overpair (${handEval.details.pairRank}${handEval.details.pairRank}) \u2014 beats all one-pair hands`);
   } else if (handEval.handName === 'Top Pair') {
@@ -1353,9 +1355,9 @@ function postflopObservations(hole, community, handEval, draws) {
     const boardMax = Math.max(...community.map(c => RANK_VALUES[c.rank]));
     const holeVals = hole.map(c => RANK_VALUES[c.rank]);
     const overcards = holeVals.filter(v => v > boardMax).length;
-    if (overcards === 2) {
+    if (overcards === 2 && street < 5) {
       obs.push('Two overcards \u2014 ~6 outs to top pair');
-    } else if (overcards === 1) {
+    } else if (overcards === 1 && street < 5) {
       obs.push('One overcard \u2014 ~3 outs to top pair');
     } else {
       obs.push(`${handEval.handName}${handEval.details.highCard ? ' (' + handEval.details.highCard + ' high)' : ''} \u2014 weak holding`);
@@ -1364,21 +1366,23 @@ function postflopObservations(hole, community, handEval, draws) {
     obs.push(`${handEval.handName}${handEval.details.highCard ? ' (' + handEval.details.highCard + ' high)' : ''} \u2014 weak holding`);
   }
 
-  // Obs 2: Draws / improvement
-  if (draws.includes('flush_draw') && draws.includes('oesd')) {
-    obs.push('Combo draw (flush + straight) \u2014 many outs, powerful');
-  } else if (draws.includes('flush_draw')) {
-    obs.push(`Flush draw \u2014 ${street === 3 ? '~35% by river' : '~19% on river card'}`);
-  } else if (draws.includes('oesd')) {
-    obs.push(`Open-ended straight draw, 8 outs \u2014 ${street === 3 ? '~31.5% by river' : '~17% next card'}`);
-  } else if (draws.includes('gutshot')) {
-    obs.push(`Gutshot, 4 outs \u2014 ${street === 3 ? '~16.5% by river' : '~8.5% next card'}, don't chase`);
-  } else if (handEval.handRank >= 4) {
-    obs.push('No draws needed \u2014 strong made hand, extract value');
-  } else if (street < 5) {
-    obs.push('No strong draws \u2014 slim odds to improve');
+  // Obs 2: Draws / improvement (not on the river — all cards are out)
+  if (street < 5) {
+    if (draws.includes('flush_draw') && draws.includes('oesd')) {
+      obs.push('Combo draw (flush + straight) \u2014 many outs, powerful');
+    } else if (draws.includes('flush_draw')) {
+      obs.push(`Flush draw \u2014 ${street === 3 ? '~35% by river' : '~19% on river card'}`);
+    } else if (draws.includes('oesd')) {
+      obs.push(`Open-ended straight draw, 8 outs \u2014 ${street === 3 ? '~31.5% by river' : '~17% next card'}`);
+    } else if (draws.includes('gutshot')) {
+      obs.push(`Gutshot, 4 outs \u2014 ${street === 3 ? '~16.5% by river' : '~8.5% next card'}, don't chase`);
+    } else if (handEval.handRank >= 4) {
+      obs.push('No draws needed \u2014 strong made hand, extract value');
+    } else {
+      obs.push('No strong draws \u2014 slim odds to improve');
+    }
   } else {
-    obs.push('Board complete \u2014 this is your showdown hand');
+    obs.push('Board complete \u2014 this is your final hand');
   }
 
   // Obs 3: Board texture
@@ -1415,10 +1419,50 @@ function postflopObservations(hole, community, handEval, draws) {
 // ═══════════════════════════════════════════════════════════════
 //  POST-FLOP LEAN
 // ═══════════════════════════════════════════════════════════════
-function postflopLean(hole, community, handEval, draws) {
+function postflopLean(hole, community, handEval, draws, ra) {
   const street = community.length;
   const sz = 'Bet ~\u00bd\u2013\u00be pot';
   const rsz = 'Raise ~3\u00d7 their bet';
+
+  // ── River: lean based on made-hand strength + river analysis ──
+  if (street === 5 && ra) {
+    const win = parseFloat(ra.winPct);
+    const lose = parseFloat(ra.losePct);
+
+    // Nuts or near-nuts — always value bet
+    if (ra.isNuts || ra.nutsRank <= 3) return {
+      first:  { action:'Raise', reason:`${sz} \u2014 ${ra.isNuts ? 'you have the nuts' : ra.nutsRank === 2 ? '2nd best hand possible' : '3rd best hand possible'}, value bet` },
+      facing: { action:'Raise', reason:`${rsz} \u2014 near the top, get max value` }
+    };
+    // Very strong: beat most hands, rarely beaten
+    if (win >= 80) return {
+      first:  { action:'Raise', reason:`${sz} \u2014 beats ${ra.winPct}% of hands, value bet` },
+      facing: { action:'Raise', reason:`${rsz} \u2014 strong showdown hand` }
+    };
+    // Solid: ahead more often than behind
+    if (win >= 60) {
+      if (lose >= 25) return {
+        first:  { action:'Raise', reason:`Bet small \u2014 ahead of most, but beaten ${ra.losePct}%` },
+        facing: { action:'Call', reason:`Call \u2014 likely ahead but vulnerable (lose ${ra.losePct}%)` }
+      };
+      return {
+        first:  { action:'Raise', reason:`${sz} \u2014 beats ${ra.winPct}% of hands` },
+        facing: { action:'Call', reason:'Call \u2014 good hand, control the pot' }
+      };
+    }
+    // Marginal: roughly a coin-flip or slightly ahead
+    if (win >= 40) return {
+      first:  { action:'Check', reason:`Check \u2014 marginal, beaten ${ra.losePct}% of the time` },
+      facing: { action:'Call', reason:`Call small bets \u2014 you beat ${ra.winPct}%` }
+    };
+    // Weak: behind more often than ahead
+    return {
+      first:  { action:'Check / Fold to bet', reason:`Check \u2014 beaten ${ra.losePct}%, weak at showdown` },
+      facing: { action:'Check / Fold to bet', reason:`Fold \u2014 too many hands beat you (${ra.losePct}%)` }
+    };
+  }
+
+  // ── Flop / Turn: existing logic ──
 
   // Strong made hands — bet or raise either way
   if (handEval.handRank >= 7) return {
@@ -1456,13 +1500,9 @@ function postflopLean(hole, community, handEval, draws) {
       first:  { action:'Raise', reason:'Bet small \u2014 semi-bluff, ~35% to hit' },
       facing: { action:'Call', reason:'Call if < \u2153 pot \u2014 flush draw ~35%' }
     };
-    if (street === 4) return {
+    return {
       first:  { action:'Check', reason:'Check \u2014 ~19% to hit, take a free card' },
       facing: { action:'It depends', reason:'Call only if < \u2155 pot \u2014 ~19% odds' }
-    };
-    return {
-      first:  { action:'Check / Fold to bet', reason:'Missed flush \u2014 check and give up' },
-      facing: { action:'Check / Fold to bet', reason:'Missed flush \u2014 fold to a bet' }
     };
   }
   if (draws.includes('oesd')) {
@@ -1470,25 +1510,15 @@ function postflopLean(hole, community, handEval, draws) {
       first:  { action:'Raise', reason:'Bet small \u2014 semi-bluff, ~31% to hit' },
       facing: { action:'Call', reason:'Call if < \u2153 pot \u2014 OESD ~31%' }
     };
-    if (street === 4) return {
+    return {
       first:  { action:'Check', reason:'Check \u2014 ~17% to hit, take a free card' },
       facing: { action:'It depends', reason:'Call only if cheap \u2014 ~17% odds' }
     };
-    return {
-      first:  { action:'Check / Fold to bet', reason:'Missed straight draw' },
-      facing: { action:'Check / Fold to bet', reason:'Missed \u2014 fold to a bet' }
-    };
   }
-  if (draws.includes('gutshot')) {
-    if (street <= 4) return {
-      first:  { action:'Check', reason:'Check \u2014 gutshot, take a free card' },
-      facing: { action:'Check / Fold to bet', reason:'Fold \u2014 4 outs, don\'t chase' }
-    };
-    return {
-      first:  { action:'Check / Fold to bet', reason:'Missed gutshot' },
-      facing: { action:'Check / Fold to bet', reason:'Missed \u2014 fold to a bet' }
-    };
-  }
+  if (draws.includes('gutshot')) return {
+    first:  { action:'Check', reason:'Check \u2014 gutshot, take a free card' },
+    facing: { action:'Check / Fold to bet', reason:'Fold \u2014 4 outs, don\'t chase' }
+  };
 
   // Weak made hands
   if (handEval.handName === 'Middle Pair' || handEval.handName === 'Bottom Pair') {
@@ -1506,13 +1536,9 @@ function postflopLean(hole, community, handEval, draws) {
     facing: { action:'Check / Fold to bet', reason:'Fold \u2014 bluff-catcher at best' }
   };
 
-  if (street >= 3) return {
+  return {
     first:  { action:'Check / Fold to bet', reason:'Check \u2014 no pair, no draw' },
     facing: { action:'Check / Fold to bet', reason:'Fold \u2014 save your chips' }
-  };
-  return {
-    first:  { action:'Check / Fold to bet', reason:'Check \u2014 weak holding' },
-    facing: { action:'Check / Fold to bet', reason:'Fold \u2014 wait for a better spot' }
   };
 }
 
@@ -1756,10 +1782,10 @@ function renderPostFlop(app, targetTotal, streetName) {
   if (!selecting) {
     handEval = evaluateHand(state.holeCards, currentCommunity);
     draws = detectDraws(state.holeCards, currentCommunity);
-    obs = postflopObservations(state.holeCards, currentCommunity, handEval, draws);
-    lean = postflopLean(state.holeCards, currentCommunity, handEval, draws);
-    odds = getOdds(state.holeCards, currentCommunity, handEval, draws);
     ra = currentCommunity.length === 5 ? riverAnalysis(state.holeCards, currentCommunity) : null;
+    obs = postflopObservations(state.holeCards, currentCommunity, handEval, draws);
+    lean = postflopLean(state.holeCards, currentCommunity, handEval, draws, ra);
+    odds = getOdds(state.holeCards, currentCommunity, handEval, draws);
   }
 
   let html = `<div class="stage active">`;
@@ -1775,7 +1801,8 @@ function renderPostFlop(app, targetTotal, streetName) {
       ra.nutsRank + 'th best';
     nutsBadge = `<span class="nuts-badge ${badgeClass}" style="margin:0 0 0 6px;font-size:0.7rem;padding:2px 8px">${ordinal}</span>`;
   }
-  html += renderHoleCardsSmall(!selecting ? strategicLabel(handEval, draws) : null, nutsBadge);
+  const label = !selecting ? (ra ? handEval.handName : strategicLabel(handEval, draws)) : null;
+  html += renderHoleCardsSmall(label, nutsBadge);
 
   // Community card slots — always show all 5 on one row
   html += `<div class="card-slots community-slots">`;
